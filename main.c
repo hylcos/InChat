@@ -17,6 +17,7 @@ char							topic_a[MAXBUF];
 char							Messages[MAXBUF][MAXBUF];
 
 char * 							username	 = NULL;
+char * 							my_string	 = "";
 tibems_bool                     useTopic     = TIBEMS_TRUE;
 tibems_bool                     useAsync      = TIBEMS_FALSE;
 tibemsAcknowledgeMode           ackMode      = TIBEMS_AUTO_ACKNOWLEDGE;
@@ -79,6 +80,7 @@ void printlogo()
 
 void ParseCfgFile(char * filename)
 {
+	
 	FILE *fp = fopen(filename,"r");
 	 if (fp != NULL)
         { 
@@ -90,8 +92,6 @@ void ParseCfgFile(char * filename)
                         char *cfline;
                         cfline = strstr((char *)line,"= " );
                         cfline = strstr((char *)cfline," " );
-					printf(cfline);
-					fflush(stdout);
     
                         if (i == 0)
 						{
@@ -106,7 +106,19 @@ void ParseCfgFile(char * filename)
 						}
                         i++;
                 }
-	 	}
+		  fclose(fp);  
+	 	} 
+		else 
+		{
+			
+			printf("No Config File Found\n\n");
+			printf("This is how you make a Config File: \n");
+			printf("url = <serverUrl>\n");
+			printf("port = <portNumber>\n");
+			printf("topic = <topic>\n");
+			fflush(stdout);
+			exit(1);
+		}
 		int i;
 		for (i = 0; i < strlen(topic_a); ++i)
 		{
@@ -118,8 +130,8 @@ void ParseCfgFile(char * filename)
 							topic_a[i] = '\0';
 				}
 		}
-	
-        fclose(fp);   
+		
+        
 }
 
 void fail( const char* message, tibemsErrorContext errContext)
@@ -178,6 +190,10 @@ void * RecieveMessages(void * ptr)
     char*                       msgTypeName = "UNKNOWN";
 	while(1){
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
+		printf("\n");
+		printf("\033[24;0H"); 
+		//
+		//printf("\033[A"); 
         if (status != TIBEMS_OK)
         {
             if (status == TIBEMS_INTR)
@@ -273,6 +289,9 @@ void * RecieveMessages(void * ptr)
         {
             fail("Error destroying tibemsMsg", errorContext);
         }
+		printf("\033[25;0H"); 
+		puts(my_string);
+		fflush(stdout);
 	}
 }
 
@@ -380,9 +399,21 @@ void run()
 	while(1)
 	{
 		int bytes_read;
-		char *my_string;
-		my_string = (char *) malloc (nbytes + 1);
-  		bytes_read = getline (&my_string, &nbytes, stdin);
+		char c = ' ';
+		my_string[0] = '\0';
+		
+		printf("\033[25;1H"); 
+		while(c != '\n')
+		{
+			size_t len = strlen(my_string);
+			printf("%s",my_string);
+			fflush(stdout);
+			my_string[len++] = c;
+			my_string[len] = '\0';
+			c = getchar();
+			
+		}
+  		//bytes_read = getline (&my_string, &nbytes, stdin);
 		my_string = stradd(username, my_string);
 		status = tibemsTextMsg_Create(&msg);
         if (status != TIBEMS_OK)
@@ -396,7 +427,7 @@ void run()
         {
             fail("Error setting tibemsTextMsg text", errorContext);
         }
-
+		my_string[0] = '\0';
         /* publish the message */
         if (useAsync)
             status = tibemsMsgProducer_AsyncSend(msgProducer, msg, onCompletion, NULL);
@@ -444,6 +475,7 @@ void run()
 
 int main ()
 {
+	my_string = (char *) malloc (100 + 1);
 	register struct passwd *pw;
   	register uid_t uid;
   	int c;
