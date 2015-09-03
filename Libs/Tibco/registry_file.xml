@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<installcomponents>
+    <assemblyProperties displayName="TIBCO EMS 64bit Development"/>
+    <installcomponent buildType="formal" currenttimestamp="10-17-2014-09-23-PM" prefix="product_tibco" sizeinbytes="9514420" uid="ems_64bit_development" version="8.2.0.007">
+        <file loc="lib/libtibemsufo64.a" md5sum="2d373d60936e1de34d3a4ef4af1b3e5b" perm="644" sizeinbytes="156882" timestamp="1413596679000"/>
+        <file loc="lib/libtibems64.a" md5sum="911743a6eff630cabb614a50082c48fd" perm="644" sizeinbytes="1433520" timestamp="1413596673000"/>
+        <file loc="lib/libtibemslookup64.a" md5sum="49c70732af613be73ecf89ee1184f224" perm="644" sizeinbytes="60612" timestamp="1413596674000"/>
+        <file loc="lib/64/libxml2.a" md5sum="4a595552c0264210599a96ca3dd29ac0" perm="644" sizeinbytes="2163822" timestamp="1255731876000"/>
+        <file loc="lib/64/libcrypto.a" md5sum="588f23046c61df616b7acf5674590468" perm="644" sizeinbytes="3209930" timestamp="1413487849000"/>
+        <file loc="lib/64/liblber.a" md5sum="8f403027b897630af7bf8175af84691e" perm="644" sizeinbytes="187262" timestamp="1276038829000"/>
+        <file loc="lib/64/libz.a" md5sum="0f192c9ca4a5fc38c6282087434cd384" perm="644" sizeinbytes="106372" timestamp="1128114744000"/>
+        <file loc="lib/64/libldap.a" md5sum="c02712bb0f68ae85f0ee33f0d7815811" perm="644" sizeinbytes="1444354" timestamp="1276038835000"/>
+        <file loc="lib/64/libssl.a" md5sum="e61172e54cc97a34d193ce93a33a4612" perm="644" sizeinbytes="621962" timestamp="1413487849000"/>
+        <file loc="lib/libtibemsadmin64.a" md5sum="fd725da45c20612a1126148439d15f28" perm="644" sizeinbytes="117416" timestamp="1413596676000"/>
+    </installcomponent>
+    <directorylist>
+        <dir loc="lib" perm="664" sizeinbytes="9510324"/>
+        <dir loc="lib/64" perm="664" sizeinbytes="7737798"/>
+    </directorylist>
+</installcomponents>
