@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <pthread.h>
 #include "tibemsUtilities.h"
 
 /*-----------------------------------------------------------------------
@@ -51,6 +52,7 @@ tibemsSession                   session      = NULL;
 tibemsMsgConsumer               msgConsumer  = NULL;
 tibemsDestination               destination  = NULL;
 
+tibemsMsgProducer               msgProducer  = NULL;
 tibemsSSLParams                 sslParams    = NULL;
 tibems_int                      receive      = 1;
 
@@ -88,8 +90,6 @@ void parseArgs(int argc, char** argv)
     
     sslParams = tibemsSSLParams_Create();
     
-    setSSLParams(sslParams,argc,argv, &pk_password);
-
     while(i < argc)
     {
         if (!argv[i]) 
@@ -104,7 +104,7 @@ void parseArgs(int argc, char** argv)
         else
         if (strcmp(argv[i],"-help-ssl")==0) 
         {
-            sslUsage();
+
         }
         else
         if (strcmp(argv[i],"-server")==0) 
@@ -221,20 +221,26 @@ void fail(
 /*---------------------------------------------------------------------
  * onException
  *---------------------------------------------------------------------*/
-void onException(
+/*void onException(
     tibemsConnection            conn,
     tibems_status               reason,
     void*                       closure)
 {
-    /* print the connection exception status */
+    /* print the connection exception status 
 
     if (reason == TIBEMS_SERVER_NOT_CONNECTED)
     {
         printf(" CONNECTION EXCEPTION: Server Disconnected\n");
         receive = 0;
     }
+}*/
+/*-----------------------------------------------------------------------
+ * Recieve Messages
+ *----------------------------------------------------------------------*/
+void RecieveMessages()
+{
+	printf("OMG een THREAD\n");	
 }
-
 /*-----------------------------------------------------------------------
  * run
  *----------------------------------------------------------------------*/
@@ -335,12 +341,18 @@ void run()
     {
         fail("Error starting tibemsConnection", errorContext);
     }
+	int  iret1;
+	iret1 = pthread_create( &thread1, NULL, RecieveMessage);
 
+	while(1)
+	{
+	}
+	
     /* read messages */
-    while(counter>0) 
+    /*while(counter>0) 
     {
         counter=counter-1;
-        /* receive the message */
+        /* receive the message *
         status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
         if (status != TIBEMS_OK)
         {
@@ -353,7 +365,7 @@ void run()
                  * means the connection to the server is lost, it will
                  * be printed in the connection exception. So ignore it
                  * here.
-                 */
+                 *
                 return;
             }
             fail("Error receiving message", errorContext);
@@ -361,7 +373,7 @@ void run()
         if (!msg)
             break;
 
-        /* acknowledge the message if necessary */
+        /* acknowledge the message if necessary *
         if (ackMode == TIBEMS_CLIENT_ACKNOWLEDGE ||
             ackMode == TIBEMS_EXPLICIT_CLIENT_ACKNOWLEDGE ||
             ackMode == TIBEMS_EXPLICIT_CLIENT_DUPS_OK_ACKNOWLEDGE)
@@ -373,7 +385,7 @@ void run()
             }
         }
 
-        /* check message type */
+        /* check message type *
         status = tibemsMsg_GetBodyType(msg,&msgType);
         if (status != TIBEMS_OK)
         {
@@ -413,7 +425,7 @@ void run()
 
         /* publish sample sends TEXT message, if received other
          * just print entire message
-         */
+         *
         if (msgType != TIBEMS_TEXT_MESSAGE)
         {
             printf(" Received %s message:\n",msgTypeName);
@@ -421,7 +433,7 @@ void run()
         }
         else
         {
-            /* get the message text */
+            /* get the message text *
             status = tibemsTextMsg_GetText(msg,&txt);
             if (status != TIBEMS_OK)
             {
@@ -432,14 +444,14 @@ void run()
                 txt ? txt : "<text is set to NULL>");
         }
 
-        /* destroy the message */
+        /* destroy the message *
         status = tibemsMsg_Destroy(msg);
         if (status != TIBEMS_OK)
         {
             fail("Error destroying tibemsMsg", errorContext);
         }
 
-    }
+    }*/
             
     /* destroy the destination */
     status = tibemsDestination_Destroy(destination);

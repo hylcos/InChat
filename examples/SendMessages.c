@@ -117,7 +117,7 @@ void parseArgs(int argc, char** argv)
 
     sslParams = tibemsSSLParams_Create();
     
-    setSSLParams(sslParams,argc,argv,&pk_password);
+    
     
     while(i < argc)
     {
@@ -133,7 +133,6 @@ void parseArgs(int argc, char** argv)
         else
         if (strcmp(argv[i],"-help-ssl")==0) 
         {
-            sslUsage();
         }
         else
         if (strcmp(argv[i],"-server")==0) 
