@@ -42,6 +42,7 @@ char*                           password     = NULL;
 char*                           pk_password  = NULL;
 int								counter      = 1;
 
+void SendMessage(char * message);
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -205,7 +206,49 @@ void printMessages( const char * message)
 	printf("\033[H"); 
 	fflush(stdout);
 }
-void 
+
+void commandoRecieved(const char * message)
+{
+	
+	printMessages(stradd("Commando: ",message));
+	char * commando = strtok((char *)message, " /\n");
+	char * wow = " quit";
+	if(strcmp(commando,"quit" ) == 0)
+	{
+		exit(1);
+	}
+	else if (strcmp(commando,"help") == 0)
+	{
+		printMessages("quit : Programma afsluiten\x1B[0m");
+		printMessages("help : Dit scherm");
+		printMessages("\x1B[31mCommando's zijn: ");
+	}
+	else if(strcmp(commando,"changeUsername" ) == 0)
+	{
+		commando =  strtok(NULL, " /\n");
+		if(commando != NULL)
+		{
+			username = commando;
+			printMessages("\x1B[32mUsername Changed\x1B[0m");
+			SendMessage(stradd(username," heeft zich aangemeld!"));
+		}
+		else
+		{
+			printMessages("\x1B[32mGive a new username\x1B[0m");
+		}
+	}
+	else
+	{
+		printMessages("\x1B[32mUnknown Commando\x1B[0m");
+	}
+	//else if
+	/*while( commando != NULL)
+	{
+		printMessages(commando);
+		commando =  strtok(NULL, " /");
+	}*/
+}
+
 void * recieveMessage(void * ptr)
 {
 	tibems_status               status      = TIBEMS_OK;
@@ -308,23 +351,31 @@ void * recieveMessage(void * ptr)
 
             //printf("%s", txt ? txt : "<text is set to NULL>");
         }
-		char * _txt = NULL;
 		
-		my_string = (char * ) malloc (sizeof(txt));
 		//*_txt = *txt;
         /* destroy the message */
         status = tibemsMsg_Destroy(msg);
+		
         if (status != TIBEMS_OK)
         {
             fail("Error destroying tibemsMsg", errorContext);
         } 
-		printMessages(txt);
-	}
+		if(strchr(txt,'@' )!= NULL){
+			char * _txt = strstr((char *)txt,"@" );
+			if(strncmp(_txt, stradd("@",username),strlen(username)+1) == 0)
+				printMessages(txt);
+		}
+		else
+		{
+			printMessages(txt);
+	
+		}
+	}			  
 }
 
 void SendMessage(char * message)
 {
-	 	 tibems_status               status      = TIBEMS_OK;
+	 	tibems_status               status      = TIBEMS_OK;
     	tibemsMsg                   msg         = NULL;
 		status = tibemsTextMsg_Create(&msg);
         if (status != TIBEMS_OK)
@@ -469,25 +520,16 @@ void run()
 		printf("\033[H"); 
 		my_string = (char * ) malloc (nbytes+1);
 		bytes_read = getline(&my_string, &nbytes, stdin);
-		
-		//printf("\033[0;2H"); 
-		//while(c != '\r')
-		//{
-			
-			//printf("%s" ,my_string);
-			//size_t len = strlen(my_string);
-			
-			//my_string[len++] = c;
-			//my_string[len] = '\0';
-			//system ("/bin/stty raw");
-			//c = getchar();
-			//system ("/bin/stty cooked");
-			
-		//}
-		//puts(" OMG" );
-  		//bytes_read = getline (&my_string, &nbytes, stdin);
-		my_string = stradd(prefix, my_string);
-		SendMessage(my_string);
+
+		if(my_string[0] == '/')
+			commandoRecieved(my_string);
+		else 
+		{
+			my_string = stradd(prefix, my_string);
+			SendMessage(my_string);
+			printf("\033[2K");
+			fflush(stdout);
+		}
 	}
 
             
