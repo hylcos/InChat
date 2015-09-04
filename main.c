@@ -14,7 +14,7 @@
 char							url_a[MAXBUF];
 char							port_a[MAXBUF];
 char							topic_a[MAXBUF];
-char							Messages[MAXBUF][MAXBUF];
+const char *					Messages[25];
 
 char * 							username	 = NULL;
 char * 							my_string	 = "";
@@ -67,7 +67,7 @@ void printlogo()
 	printf("################################################################################");
 	printf("################################################################################");
 	printf("################################################################################");
-	printf("##############  Created by Hylco Uding # Intraffic \xa9            ################");
+	printf("##############  Created by Hylco Uding #        \xa9            ################");
 	printf("################################################################################");
 	printf("################################################################################");
 	printf("################################################################################");
@@ -180,7 +180,31 @@ static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
         printf("Error:  %s.\n", tibemsStatus_GetText(status));
     }
 }
+void printMessages(const char * message)
+{
+	int i;
 
+	for( i = 0 ; i < 25; i++) 
+	{
+		printf("\033[%d;1H",i+1); 
+		//printf("%c[2K", 27);
+		printf("                                                                                ");
+		fflush(stdout);
+		Messages[i]=Messages[i+1];
+		
+	}
+	Messages[24] = message;
+	
+	for( i = 0 ; i < 25; i++)
+	{
+		printf("\033[%d;1H",i); 
+		printf(Messages[i]);
+		fflush(stdout);
+	}
+	printf("\033[25;1H");
+	fflush(stdout);
+
+}
 void * RecieveMessages(void * ptr)
 {
 	tibems_status               status      = TIBEMS_OK;
@@ -190,8 +214,8 @@ void * RecieveMessages(void * ptr)
     char*                       msgTypeName = "UNKNOWN";
 	while(1){
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
-		printf("\n");
-		printf("\033[24;0H"); 
+		//printf("\n");
+		//printf("\033[24;0H"); 
 		//
 		//printf("\033[A"); 
         if (status != TIBEMS_OK)
@@ -280,7 +304,7 @@ void * RecieveMessages(void * ptr)
                 fail("Error getting tibemsTextMsg text", errorContext);
             }
 
-            printf("%s", txt ? txt : "<text is set to NULL>");
+            //printf("%s", txt ? txt : "<text is set to NULL>");
         }
 
         /* destroy the message */
@@ -289,9 +313,7 @@ void * RecieveMessages(void * ptr)
         {
             fail("Error destroying tibemsMsg", errorContext);
         }
-		printf("\033[25;0H"); 
-		puts(my_string);
-		fflush(stdout);
+		printMessages(txt);
 	}
 }
 
@@ -406,8 +428,7 @@ void run()
 		while(c != '\n')
 		{
 			size_t len = strlen(my_string);
-			printf("%s",my_string);
-			fflush(stdout);
+			
 			my_string[len++] = c;
 			my_string[len] = '\0';
 			c = getchar();
