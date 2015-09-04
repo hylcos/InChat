@@ -14,10 +14,11 @@
 char							url_a[MAXBUF];
 char							port_a[MAXBUF];
 char							topic_a[MAXBUF];
-const char *					Messages[25];
+char 							Messages[25][MAXBUF];
 
 char * 							username	 = NULL;
-char * 							my_string	 = "";
+char * 							prefix 	 	 = NULL;
+char * 							my_string	 = "a";
 tibems_bool                     useTopic     = TIBEMS_TRUE;
 tibems_bool                     useAsync      = TIBEMS_FALSE;
 tibemsAcknowledgeMode           ackMode      = TIBEMS_AUTO_ACKNOWLEDGE;
@@ -180,39 +181,40 @@ static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
         printf("Error:  %s.\n", tibemsStatus_GetText(status));
     }
 }
-void printMessages(const char * message)
+
+void printMessages( const char * message)
 {
 	int i;
-
-	for( i = 0 ; i < 25; i++) 
+	printf("\e[H\e[2J");
+	for( i = 23; i >0; i--) 
 	{
-		printf("\033[%d;1H",i+1); 
-		//printf("%c[2K", 27);
-		printf("                                                                                ");
 		fflush(stdout);
-		Messages[i]=Messages[i+1];
-		
+		if(Messages[i-1] != NULL){
+			
+			strcpy(Messages[i],Messages[i-1]);
+		}
 	}
-	Messages[24] = message;
-	
-	for( i = 0 ; i < 25; i++)
+	strcpy(Messages[0],message);
+	for( i = 0 ; i < 23; i++)
 	{
-		printf("\033[%d;1H",i); 
-		printf(Messages[i]);
+		printf("\033[%d;1H",i+2);
+		printf(" %s" ,Messages[i]);
 		fflush(stdout);
 	}
-	printf("\033[25;1H");
 	fflush(stdout);
-
+	printf("\033[H"); 
+	fflush(stdout);
 }
-void * RecieveMessages(void * ptr)
+void 
+void * recieveMessage(void * ptr)
 {
 	tibems_status               status      = TIBEMS_OK;
     tibemsMsg                   msg         = NULL;
-    const char*                 txt         = NULL;
+    
     tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
     char*                       msgTypeName = "UNKNOWN";
 	while(1){
+		const char*                 txt         = NULL;
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
 		//printf("\n");
 		//printf("\033[24;0H"); 
@@ -306,21 +308,62 @@ void * RecieveMessages(void * ptr)
 
             //printf("%s", txt ? txt : "<text is set to NULL>");
         }
-
+		char * _txt = NULL;
+		
+		my_string = (char * ) malloc (sizeof(txt));
+		//*_txt = *txt;
         /* destroy the message */
         status = tibemsMsg_Destroy(msg);
         if (status != TIBEMS_OK)
         {
             fail("Error destroying tibemsMsg", errorContext);
-        }
+        } 
 		printMessages(txt);
 	}
+}
+
+void SendMessage(char * message)
+{
+	 	 tibems_status               status      = TIBEMS_OK;
+    	tibemsMsg                   msg         = NULL;
+		status = tibemsTextMsg_Create(&msg);
+        if (status != TIBEMS_OK)
+        {
+            fail("Error creating tibemsTextMsg", errorContext);
+        }
+        
+        /* set the message text */
+        status = tibemsTextMsg_SetText(msg,message);
+        if (status != TIBEMS_OK)
+        {
+            fail("Error setting tibemsTextMsg text", errorContext);
+        }
+        /* publish the message */
+        if (useAsync)
+            status = tibemsMsgProducer_AsyncSend(msgProducer, msg, onCompletion, NULL);
+        else
+            status = tibemsMsgProducer_Send(msgProducer,msg);
+
+        if (status != TIBEMS_OK)
+        {
+            fail("Error publishing tibemsTextMsg", errorContext);
+        }
+        //printf("Published message: %s\n",my_string);
+        
+        /* destroy the message */
+        status = tibemsMsg_Destroy(msg);
+        if (status != TIBEMS_OK)
+        {
+            fail("Error destroying tibemsTextMsg", errorContext);
+        }
+		usleep(10);	
+	
+		printf("\033[H"); 
 }
 
 void run() 
 {
     tibems_status               status      = TIBEMS_OK;
-    tibemsMsg                   msg         = NULL;
     const char*                 txt         = NULL;
     tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
     char*                       msgTypeName = "UNKNOWN";
@@ -360,7 +403,7 @@ void run()
         status = tibemsConnectionFactory_SetPkPassword(factory,pk_password);
         if (status != TIBEMS_OK) 
         {
-            fail("Error setting pk password", errorContext);
+            fail("Error settin24g pk password", errorContext);
         }
     }
     status = tibemsConnectionFactory_CreateConnection(factory,&connection,
@@ -414,60 +457,37 @@ void run()
 	pthread_t thread1;
 	int iret1;
 	
-	iret1 = pthread_create( &thread1, NULL, RecieveMessages,(void *)"");
+	iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)"");
 	
-	
-	int nbytes = 100;
+	SendMessage(stradd(username," heeft zich aangemeld!"));
+	int nbytes = 1024;
 	while(1)
 	{
 		int bytes_read;
 		char c = ' ';
-		my_string[0] = '\0';
+		char* my_string;
+		printf("\033[H"); 
+		my_string = (char * ) malloc (nbytes+1);
+		bytes_read = getline(&my_string, &nbytes, stdin);
 		
-		printf("\033[25;1H"); 
-		while(c != '\n')
-		{
-			size_t len = strlen(my_string);
+		//printf("\033[0;2H"); 
+		//while(c != '\r')
+		//{
 			
-			my_string[len++] = c;
-			my_string[len] = '\0';
-			c = getchar();
+			//printf("%s" ,my_string);
+			//size_t len = strlen(my_string);
 			
-		}
+			//my_string[len++] = c;
+			//my_string[len] = '\0';
+			//system ("/bin/stty raw");
+			//c = getchar();
+			//system ("/bin/stty cooked");
+			
+		//}
+		//puts(" OMG" );
   		//bytes_read = getline (&my_string, &nbytes, stdin);
-		my_string = stradd(username, my_string);
-		status = tibemsTextMsg_Create(&msg);
-        if (status != TIBEMS_OK)
-        {
-            fail("Error creating tibemsTextMsg", errorContext);
-        }
-        
-        /* set the message text */
-        status = tibemsTextMsg_SetText(msg,my_string);
-        if (status != TIBEMS_OK)
-        {
-            fail("Error setting tibemsTextMsg text", errorContext);
-        }
-		my_string[0] = '\0';
-        /* publish the message */
-        if (useAsync)
-            status = tibemsMsgProducer_AsyncSend(msgProducer, msg, onCompletion, NULL);
-        else
-            status = tibemsMsgProducer_Send(msgProducer,msg);
-
-        if (status != TIBEMS_OK)
-        {
-            fail("Error publishing tibemsTextMsg", errorContext);
-        }
-        //printf("Published message: %s\n",my_string);
-        
-        /* destroy the message */
-        status = tibemsMsg_Destroy(msg);
-        if (status != TIBEMS_OK)
-        {
-            fail("Error destroying tibemsTextMsg", errorContext);
-        }
-		usleep(10);
+		my_string = stradd(prefix, my_string);
+		SendMessage(my_string);
 	}
 
             
@@ -496,7 +516,7 @@ void run()
 
 int main ()
 {
-	my_string = (char *) malloc (100 + 1);
+	my_string = (char *) malloc (1024 + 1);
 	register struct passwd *pw;
   	register uid_t uid;
   	int c;
@@ -505,7 +525,7 @@ int main ()
   	pw = getpwuid (uid);
 	
 	username = pw->pw_name;
-	username = stradd(username, ": ");
+	prefix = stradd(username, ": ");
   	printlogo();
   	getchar();
 	ParseCfgFile("Inchat.cfg");
