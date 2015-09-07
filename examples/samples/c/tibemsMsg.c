@@ -53,7 +53,7 @@
  *----------------------------------------------------------------------*/
 
 char*                           serverUrl    = NULL;
-char*                           userName     = NULL;
+char*                           userName     = "admin";
 char*                           password     = NULL;
 char*                           pk_password  = NULL;
 char*                           destName     = "topic.sample";
@@ -99,7 +99,7 @@ void parseArgs(int argc, char** argv)
     
     sslParams = tibemsSSLParams_Create();
     
-    setSSLParams(sslParams,argc,argv, &pk_password);
+    //setSSLParams(sslParams,argc,argv, &pk_password);
     
     while(i < argc)
     {
@@ -115,7 +115,7 @@ void parseArgs(int argc, char** argv)
         else
         if (strcmp(argv[i],"-help-ssl")==0) 
         {
-            sslUsage();
+            //sslUsage();
         }
         else
         if (strcmp(argv[i],"-server")==0) 
@@ -355,7 +355,7 @@ void print_message(
 
     if (message_type == TIBEMS_MAP_MESSAGE)
     {
-
+		tibemsMsg_Print(msg);
         status = tibemsMapMsg_GetMapNames(msg,&enumeration);
         if (status != TIBEMS_OK)
             fail("Error trying to get map fields enumerator", errorContext);
@@ -509,7 +509,7 @@ void run()
 
     /* create the destination */
     if (useTopic)
-        status = tibemsTopic_Create(&destination,destName);
+        status = tibemsTopic_Create(&destination,"$sys.monitor.producer.destroy");
     else
         status = tibemsQueue_Create(&destination,destName);
     if (status != TIBEMS_OK)

@@ -21,9 +21,9 @@ TLIBS=-lpthread
 LIBS=  $(TIBEMS_LIB) $(TIBEMSADMIN_LIB) $(TIBEMS_LDAP_LIB) $(TIBEMS_XML_LIB) $(TIBEMS_SSL_LIB) $(TIBEMS_ZLIB) $(TLIBS)
 
 
-all: Main 
+all: tibemsMsg 
 
 
-Main: main.c
-	$(CC) $(LDFLAGS) $(CFLAGS) main.c  $(LIBS) -o $@
+tibemsMsg: tibemsMsg.c
+	$(CC) $(LDFLAGS) $(CFLAGS) tibemsMsg.c  $(LIBS) -o $@
 

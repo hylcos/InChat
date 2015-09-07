@@ -27,11 +27,20 @@ tibemsConnectionFactory         factory      = NULL;
 tibemsConnection                connection   = NULL;
 tibemsSession                   session      = NULL;
 tibemsMsgConsumer               msgConsumer  = NULL;
+
 tibemsMsgProducer          		msgProducer  = NULL;
 tibemsDestination               destination  = NULL;
 tibemsSSLParams                 sslParams    = NULL;
 tibems_int                      receive      = 1;
 tibemsErrorContext              errorContext = NULL;
+
+
+//for $sys.monitor.producer.destroy
+tibemsConnectionFactory         d_factory      = NULL;
+tibemsConnection                d_connection   = NULL;
+tibemsSession                   d_session      = NULL;
+tibemsMsgConsumer               d_msgConsumer  = NULL;
+tibemsDestination               d_destination  = NULL;
 
 /*-----------------------------------------------------------------------
  * Needs to go away
@@ -43,6 +52,7 @@ char*                           pk_password  = NULL;
 int								counter      = 1;
 
 void SendMessage(char * message);
+
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -76,7 +86,7 @@ void printlogo()
 	printf("###################         Press ENTER to Continue          ###################");
 	printf("################################################################################");
 	printf("################################################################################");
-	printf("################################################################################");
+	printf("##################################################################################");
 	
 }
 
@@ -183,13 +193,13 @@ static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
     }
 }
 
-void xor_encrypt(char * string) {
+void xor_encrypt(char * string)
+{
 	int i, string_length = strlen(string);
 	char key = 'K';
 	for (i = 0; i<string_length;i++)
 	{
 		string[i] = string[i] ^ key;
-		printf("%i",string[i]);
 	}
 }
 
@@ -230,7 +240,7 @@ void commandoRecieved(const char * message)
 	else if (strcmp(commando,"help") == 0)
 	{
 		printMessages("changeUsername <NAME> : gebruikersnaam veranderen\x1B[0m");
-		printMessages("quit : Programma afsluiten\x1B[0m");
+		printMessages("quit : Programma afsluiten");
 		printMessages("help : Dit scherm");
 		printMessages("\x1B[31mCommando's zijn: ");
 	}
@@ -252,13 +262,8 @@ void commandoRecieved(const char * message)
 	else
 	{
 		printMessages("\x1B[32mUnknown Commando\x1B[0m");
+		commandoRecieved("help");
 	}
-	//else if
-	/*while( commando != NULL)
-	{
-		printMessages(commando);
-		commando =  strtok(NULL, " /");
-	}*/
 }
 
 void * recieveMessage(void * ptr)
@@ -271,22 +276,11 @@ void * recieveMessage(void * ptr)
 	while(1){
 		const char*                 txt         = NULL;
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
-		//printf("\n");
-		//printf("\033[24;0H"); 
-		//
-		//printf("\033[A"); 
+		
         if (status != TIBEMS_OK)
         {
             if (status == TIBEMS_INTR)
             {
-                /* this means receive has been interrupted. This
-                 * could happen if the connection has been terminated
-                 * or the program closed the connection or the session.
-                 * Since this program does not close anything, this 
-                 * means the connection to the server is lost, it will
-                 * be printed in the connection exception. So ignore it
-                 * here.
-                 */
                 return;
             }
             fail("Error receiving message", errorContext);
@@ -386,6 +380,50 @@ void * recieveMessage(void * ptr)
 	}			  
 }
 
+void * monitorMessages(void * ptr)
+{
+	
+	tibems_status               status      = TIBEMS_OK;
+    tibemsMsg                   msg         = NULL;
+    tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
+	tibemsMsgField				field;
+	tibemsMsgEnum  				enumeration;
+	const char * 				name;
+	
+	while(1){
+		
+		status = tibemsMsgConsumer_Receive(d_msgConsumer,&msg);
+		printf("\e[H\e[2J");
+
+
+        status = tibemsMsg_GetBodyType(msg,&msgType);
+        if (status != TIBEMS_OK)
+            fail("Error getting message type", errorContext);
+
+ 
+
+       status = tibemsMsg_GetPropertyNames(msg,&enumeration);
+   
+		while((status = tibemsMsgEnum_GetNextName(enumeration,&name)) == TIBEMS_OK)
+		{
+			status = tibemsMsg_GetProperty(msg,name,&field);
+			if (status != TIBEMS_OK)
+				fail("Error trying to get property by name", errorContext);
+
+			if(strcmp(name,"conn_username")==0)
+			{
+				tibemsMsgField * fld = &field;
+				printMessages(stradd("\x1B[33m",stradd(fld->data.utf8Value, "\x1B[34m heeft zich afgemeld!\x1B[0m")));
+				printf("\n");
+			}
+		
+    	}
+
+    tibemsMsgEnum_Destroy(enumeration);
+    
+	}
+}
+
 void SendMessage(char * message)
 {
 		xor_encrypt(message);
@@ -433,12 +471,8 @@ void run()
     tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
     char*                       msgTypeName = "UNKNOWN";
     
-    if (!topic_a) {
+    if (!topic_a)
         printf("***Error: must specify destination name\n");
-       
-    }
-    
-    //printf(" Subscribing to destination: '%s'\n\n",topic_a);
     
     status = tibemsErrorContext_Create(&errorContext);
 
@@ -449,87 +483,79 @@ void run()
     }
     factory = tibemsConnectionFactory_Create();
     if (!factory)
-    {
         fail("Error creating tibemsConnectionFactory", errorContext);
-    }
+	
+	d_factory = tibemsConnectionFactory_Create();
+    if (!d_factory)
+        fail("Error creating tibemsConnectionFactory", errorContext);
+	
     status = tibemsConnectionFactory_SetServerURL(factory,url_a);
+	status = tibemsConnectionFactory_SetServerURL(d_factory,url_a);
     if (status != TIBEMS_OK) 
-    {
         fail("Error setting server url", errorContext);
-    }
-    /* create the connection, use ssl if specified */
+	
     if(sslParams)
     {
         status = tibemsConnectionFactory_SetSSLParams(factory,sslParams);
-        if (status != TIBEMS_OK) 
-        {
+		status = tibemsConnectionFactory_SetSSLParams(d_factory,sslParams);
+        if (status != TIBEMS_OK)
             fail("Error setting ssl params", errorContext);
-        }
+		status = tibemsConnectionFactory_SetPkPassword(d_factory,pk_password);
         status = tibemsConnectionFactory_SetPkPassword(factory,pk_password);
+		
         if (status != TIBEMS_OK) 
-        {
             fail("Error settin24g pk password", errorContext);
-        }
     }
-    status = tibemsConnectionFactory_CreateConnection(factory,&connection,
-                                                      userName,password);
+    status = tibemsConnectionFactory_CreateConnection(factory,&connection,username,password);
+	status = tibemsConnectionFactory_CreateConnection(d_factory,&d_connection,"admin",password);
     if (status != TIBEMS_OK)
-    {
         fail("Error creating tibemsConnection", errorContext);
-    }
-    /* set the exception listener */
-    status = tibemsConnection_SetExceptionListener(connection,
-            onException, NULL);
+	
+    status = tibemsConnection_SetExceptionListener(connection, onException, NULL);
+	status = tibemsConnection_SetExceptionListener(d_connection, onException, NULL);
     if (status != TIBEMS_OK)
-    {
         fail("Error setting exception listener", errorContext);
-    }
-    /* create the destination */
+	
     if (useTopic)
         status = tibemsTopic_Create(&destination,topic_a );
     else
-        status = tibemsQueue_Create(&destination,topic_a);
+        status = tibemsQueue_Create(&destination,"$sys.monitor.producer.destroy");
+		
+	status = tibemsTopic_Create(&d_destination,"$sys.monitor.producer.destroy");
     if (status != TIBEMS_OK)
-    {
         fail("Error creating tibemsDestination", errorContext);
-    }
-    /* create the session */
-    status = tibemsConnection_CreateSession(connection,
-            &session,TIBEMS_FALSE,ackMode);
+	
+    status = tibemsConnection_CreateSession(connection,&session,TIBEMS_FALSE,ackMode);
+	status = tibemsConnection_CreateSession(d_connection,&d_session,TIBEMS_FALSE,ackMode);
     if (status != TIBEMS_OK)
-    {
         fail("Error creating tibemsSession", errorContext);
-	}
-    /* create the consumer */
-    status = tibemsSession_CreateConsumer(session,
-            &msgConsumer,destination,NULL,TIBEMS_FALSE);
+	
+    status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
+	status = tibemsSession_CreateConsumer(d_session,&d_msgConsumer,d_destination,NULL,TIBEMS_FALSE);
     if (status != TIBEMS_OK)
-    {
         fail("Error creating tibemsMsgConsumer", errorContext);
-    }
-	status = tibemsSession_CreateProducer(session,
-            &msgProducer,destination);
+	
+	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
-    {
         fail("Error creating tibemsMsgProducer", errorContext);
-    }
-    /* start the connection */
+	
     status = tibemsConnection_Start(connection);
+	
+    status = tibemsConnection_Start(d_connection);
     if (status != TIBEMS_OK)
-    {
         fail("Error starting tibemsConnection", errorContext);
-    }
+	
 	pthread_t thread1;
-	int iret1;
+	int iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)""); 
 	
-	iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)"");
+	pthread_t thread2;
+	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	
-	SendMessage(stradd(username," heeft zich aangemeld!"));
+	SendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m")));
 	int nbytes = 1024;
 	while(1)
 	{
 		int bytes_read;
-		char c = ' ';
 		char* my_string;
 		printf("\033[H"); 
 		my_string = (char * ) malloc (nbytes+1);
@@ -539,55 +565,40 @@ void run()
 			commandoRecieved(my_string);
 		else 
 		{
-			my_string = stradd(prefix, my_string);
-			SendMessage(my_string);
+			SendMessage(stradd(prefix, my_string));
 			printf("\033[2K");
 			fflush(stdout);
 		}
 	}
 
             
-    /* destroy the destination */
     status = tibemsDestination_Destroy(destination);
     if (status != TIBEMS_OK)
-    {
         fail("Error destroying tibemsDestination", errorContext);
-    }
 
-    /* close the connection */
     status = tibemsConnection_Close(connection);
     if (status != TIBEMS_OK)
-    {
         fail("Error closing tibemsConnection", errorContext);
-    }
 
-    /* destroy the ssl params */
     if (sslParams) 
-    {
         tibemsSSLParams_Destroy(sslParams);
-    }
 
     tibemsErrorContext_Close(errorContext);
 }
 
 int main ()
 {
-	my_string = (char *) malloc (1024 + 1);
-	register struct passwd *pw;
-  	register uid_t uid;
-  	int c;
-
-  	uid = geteuid ();
-  	pw = getpwuid (uid);
-	
-	username = pw->pw_name;
+	username = getpwuid(geteuid ())->pw_name;
 	prefix = stradd(username, ": ");
+	
   	printlogo();
   	getchar();
+	
 	ParseCfgFile("Inchat.cfg");
+	
 	printf("\e[1;1H\e[2J");
 	fflush(stdout);
-	//serverUrl = server_a + port_a;
+	
 	run();
   	return 0;
 }
