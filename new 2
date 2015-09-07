@@ -42,7 +42,6 @@ char*                           password     = NULL;
 char*                           pk_password  = NULL;
 int								counter      = 1;
 
-void SendMessage(char * message);
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -182,17 +181,6 @@ static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
         printf("Error:  %s.\n", tibemsStatus_GetText(status));
     }
 }
-
-void xor_encrypt(char * string) {
-	int i, string_length = strlen(string);
-	char key = 'K';
-	for (i = 0; i<string_length;i++)
-	{
-		string[i] = string[i] ^ key;
-		printf("%i",string[i]);
-	}
-}
-
 void printMessages( const char * message)
 {
 	int i;
@@ -216,52 +204,7 @@ void printMessages( const char * message)
 	printf("\033[H"); 
 	fflush(stdout);
 }
-
-void commandoRecieved(const char * message)
-{
-	
-	printMessages(stradd("Commando: ",message));
-	char * commando = strtok((char *)message, " /\n");
-	char * wow = " quit";
-	if(strcmp(commando,"quit" ) == 0)
-	{
-		exit(1);
-	}
-	else if (strcmp(commando,"help") == 0)
-	{
-		printMessages("changeUsername <NAME> : gebruikersnaam veranderen\x1B[0m");
-		printMessages("quit : Programma afsluiten\x1B[0m");
-		printMessages("help : Dit scherm");
-		printMessages("\x1B[31mCommando's zijn: ");
-	}
-	else if(strcmp(commando,"changeUsername" ) == 0)
-	{
-		commando =  strtok(NULL, " /\n");
-		if(commando != NULL)
-		{
-			username = commando;
-			prefix = stradd(username, ": ");
-			printMessages("\x1B[32mUsername Changed\x1B[0m");
-			SendMessage(stradd(username," heeft zich aangemeld!"));
-		}
-		else
-		{
-			printMessages("\x1B[32mGive a new username\x1B[0m");
-		}
-	}
-	else
-	{
-		printMessages("\x1B[32mUnknown Commando\x1B[0m");
-	}
-	//else if
-	/*while( commando != NULL)
-	{
-		printMessages(commando);
-		commando =  strtok(NULL, " /");
-	}*/
-}
-
-void * recieveMessage(void * ptr)
+void * RecieveMessages(void * ptr)
 {
 	tibems_status               status      = TIBEMS_OK;
     tibemsMsg                   msg         = NULL;
@@ -305,7 +248,7 @@ void * recieveMessage(void * ptr)
                 fail("Error acknowledging message", errorContext);
             }
         }
-		
+
         /* check message type */
         status = tibemsMsg_GetBodyType(msg,&msgType);
         if (status != TIBEMS_OK)
@@ -363,33 +306,23 @@ void * recieveMessage(void * ptr)
 
             //printf("%s", txt ? txt : "<text is set to NULL>");
         }
+		char * _txt = NULL;
 		
+		my_string = (char * ) malloc (sizeof(txt));
 		//*_txt = *txt;
         /* destroy the message */
         status = tibemsMsg_Destroy(msg);
-		
         if (status != TIBEMS_OK)
         {
             fail("Error destroying tibemsMsg", errorContext);
         } 
-		xor_encrypt((char *)txt);
-		if(strchr(txt,'@' )!= NULL){
-			char * _txt = strstr((char *)txt,"@" );
-			if(strncmp(_txt, stradd("@",username),strlen(username)+1) == 0)
-				printMessages(txt);
-		}
-		else
-		{
-			printMessages(txt);
-	
-		}
-	}			  
+		printMessages(txt);
+	}
 }
 
 void SendMessage(char * message)
 {
-		xor_encrypt(message);
-	 	tibems_status               status      = TIBEMS_OK;
+	 	 tibems_status               status      = TIBEMS_OK;
     	tibemsMsg                   msg         = NULL;
 		status = tibemsTextMsg_Create(&msg);
         if (status != TIBEMS_OK)
@@ -522,7 +455,7 @@ void run()
 	pthread_t thread1;
 	int iret1;
 	
-	iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)"");
+	iret1 = pthread_create( &thread1, NULL, RecieveMessages,(void *)"");
 	
 	SendMessage(stradd(username," heeft zich aangemeld!"));
 	int nbytes = 1024;
@@ -534,16 +467,25 @@ void run()
 		printf("\033[H"); 
 		my_string = (char * ) malloc (nbytes+1);
 		bytes_read = getline(&my_string, &nbytes, stdin);
-
-		if(my_string[0] == '/')
-			commandoRecieved(my_string);
-		else 
-		{
-			my_string = stradd(prefix, my_string);
-			SendMessage(my_string);
-			printf("\033[2K");
-			fflush(stdout);
-		}
+		
+		//printf("\033[0;2H"); 
+		//while(c != '\r')
+		//{
+			
+			//printf("%s" ,my_string);
+			//size_t len = strlen(my_string);
+			
+			//my_string[len++] = c;
+			//my_string[len] = '\0';
+			//system ("/bin/stty raw");
+			//c = getchar();
+			//system ("/bin/stty cooked");
+			
+		//}
+		//puts(" OMG" );
+  		//bytes_read = getline (&my_string, &nbytes, stdin);
+		my_string = stradd(prefix, my_string);
+		SendMessage(my_string);
 	}
 
             
