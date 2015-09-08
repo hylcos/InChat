@@ -266,7 +266,7 @@ void commandoRecieved(const char * message)
 	}
 }
 
-void * recieveMessage(void * ptr)
+void * receiveMessage(void * ptr)
 {
 	
 	while(1){
@@ -565,7 +565,7 @@ void run()
         fail("Error starting tibemsConnection", errorContext);
 	
 	pthread_t thread1;
-	int iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)""); 
+	int iret1 = pthread_create( &thread1, NULL, receiveMessage,(void *)""); 
 	
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
