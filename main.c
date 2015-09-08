@@ -193,13 +193,13 @@ static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
     }
 }
 
-void xor_encrypt(char * string)
+void xor_encrypt(const char * string, char * value)
 {
 	int i, string_length = strlen(string);
 	char key = 'K';
 	for (i = 0; i<string_length;i++)
 	{
-		string[i] = string[i] ^ key;
+		value[i] = string[i] ^ key;
 	}
 }
 
@@ -268,20 +268,19 @@ void commandoRecieved(const char * message)
 
 void * recieveMessage(void * ptr)
 {
-	tibems_status               status      = TIBEMS_OK;
-    tibemsMsg                   msg         = NULL;
-    
-    tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
-    char*                       msgTypeName = "UNKNOWN";
+	
 	while(1){
+		tibems_status               status      = TIBEMS_OK;
+		tibemsMsg                   msg         = NULL;
+
+		tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
+		char*                       msgTypeName = "UNKNOWN";
 		const char*                 txt         = NULL;
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
-		
         if (status != TIBEMS_OK)
         {
             if (status == TIBEMS_INTR)
             {
-                
             }
             fail("Error receiving message", errorContext);
         }
@@ -355,28 +354,32 @@ void * recieveMessage(void * ptr)
                 fail("Error getting tibemsTextMsg text", errorContext);
             }
 
-            //printf("%s", txt ? txt : "<text is set to NULL>");
+            //printMessages(txt);
         }
 		
 		//*_txt = *txt;
         /* destroy the message */
-        status = tibemsMsg_Destroy(msg);
+       //
 		
         if (status != TIBEMS_OK)
         {
             fail("Error destroying tibemsMsg", errorContext);
         } 
-		xor_encrypt((char *)txt);
-		if(strchr(txt,'@' )!= NULL){
-			char * _txt = strstr((char *)txt,"@" );
+		char value[1024];
+		
+		xor_encrypt((char *)txt,value);
+		
+		if(strchr(value,'@' )!= NULL){
+			char * _txt = strstr((char *)value,"@" );
 			if(strncmp(_txt, stradd("@",username),strlen(username)+1) == 0)
-				printMessages(txt);
+				printMessages(value);
 		}
 		else
 		{
-			printMessages(txt);
+			printMessages(value);
 	
 		}
+		status = tibemsMsg_Destroy(msg);
 	}			  
 }
 
@@ -425,8 +428,13 @@ void * monitorMessages(void * ptr)
 }
 
 void SendMessage(char * message)
-{
-		xor_encrypt(message);
+{	
+	
+		char value[1024];
+		xor_encrypt(message,value);
+	//printMessages(value);
+	//printMessages(message);
+		
 	 	tibems_status               status      = TIBEMS_OK;
     	tibemsMsg                   msg         = NULL;
 		status = tibemsTextMsg_Create(&msg);
@@ -436,7 +444,7 @@ void SendMessage(char * message)
         }
         
         /* set the message text */
-        status = tibemsTextMsg_SetText(msg,message);
+        status = tibemsTextMsg_SetText(msg,value);
         if (status != TIBEMS_OK)
         {
             fail("Error setting tibemsTextMsg text", errorContext);
@@ -490,6 +498,8 @@ void run()
         fail("Error creating tibemsConnectionFactory", errorContext);
 	
     status = tibemsConnectionFactory_SetServerURL(factory,url_a);
+	 if (status != TIBEMS_OK) 
+        fail("Error setting server url", errorContext);
 	status = tibemsConnectionFactory_SetServerURL(d_factory,url_a);
     if (status != TIBEMS_OK) 
         fail("Error setting server url", errorContext);
@@ -497,10 +507,14 @@ void run()
     if(sslParams)
     {
         status = tibemsConnectionFactory_SetSSLParams(factory,sslParams);
+		  if (status != TIBEMS_OK)
+            fail("Error setting ssl params", errorContext);
 		status = tibemsConnectionFactory_SetSSLParams(d_factory,sslParams);
         if (status != TIBEMS_OK)
             fail("Error setting ssl params", errorContext);
 		status = tibemsConnectionFactory_SetPkPassword(d_factory,pk_password);
+		 if (status != TIBEMS_OK) 
+            fail("Error settin24g pk password", errorContext);
         status = tibemsConnectionFactory_SetPkPassword(factory,pk_password);
 		
         if (status != TIBEMS_OK) 
@@ -516,21 +530,24 @@ void run()
     if (status != TIBEMS_OK)
         fail("Error setting exception listener", errorContext);
 	
-    if (useTopic)
-        status = tibemsTopic_Create(&destination,topic_a );
-    else
-        status = tibemsQueue_Create(&destination,"$sys.monitor.producer.destroy");
-		
+  
+    status = tibemsTopic_Create(&destination,topic_a );
+   if (status != TIBEMS_OK)
+        fail("Error creating tibemsDestination", errorContext);
 	status = tibemsTopic_Create(&d_destination,"$sys.monitor.producer.destroy");
     if (status != TIBEMS_OK)
         fail("Error creating tibemsDestination", errorContext);
 	
     status = tibemsConnection_CreateSession(connection,&session,TIBEMS_FALSE,ackMode);
+	 if (status != TIBEMS_OK)
+        fail("Error creating tibemsSession", errorContext);
 	status = tibemsConnection_CreateSession(d_connection,&d_session,TIBEMS_FALSE,ackMode);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsSession", errorContext);
 	
     status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
+	if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgConsumer", errorContext);
 	status = tibemsSession_CreateConsumer(d_session,&d_msgConsumer,d_destination,NULL,TIBEMS_FALSE);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
@@ -540,6 +557,8 @@ void run()
         fail("Error creating tibemsMsgProducer", errorContext);
 	
     status = tibemsConnection_Start(connection);
+	  if (status != TIBEMS_OK)
+        fail("Error starting tibemsConnection", errorContext);
 	
     status = tibemsConnection_Start(d_connection);
     if (status != TIBEMS_OK)
@@ -552,15 +571,13 @@ void run()
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	
 	SendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m")));
-	int nbytes = 1024;
+	size_t nbytes = 1024;
 	while(1)
 	{
 		int bytes_read;
 		char* my_string;
 		printf("\033[H"); 
-		my_string = (char * ) malloc (nbytes+1);
 		bytes_read = getline(&my_string, &nbytes, stdin);
-
 		if(my_string[0] == '/')
 			commandoRecieved(my_string);
 		else 
