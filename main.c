@@ -520,8 +520,8 @@ void run()
         if (status != TIBEMS_OK) 
             fail("Error settin24g pk password", errorContext);
     }
-    status = tibemsConnectionFactory_CreateConnection(factory,&connection,username,password);
-	status = tibemsConnectionFactory_CreateConnection(d_factory,&d_connection,"admin",password);
+    status = tibemsConnectionFactory_CreateConnection(factory,&connection,"admin","admin");
+	status = tibemsConnectionFactory_CreateConnection(d_factory,&d_connection,"admin","admin");
     if (status != TIBEMS_OK)
         fail("Error creating tibemsConnection", errorContext);
 	
