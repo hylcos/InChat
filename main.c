@@ -281,7 +281,7 @@ void * recieveMessage(void * ptr)
         {
             if (status == TIBEMS_INTR)
             {
-                return;
+                
             }
             fail("Error receiving message", errorContext);
         }
