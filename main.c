@@ -106,24 +106,17 @@ void ParseCfgFile(char * filename)
         { 
                 char line[MAXBUF];
                 int i = 0;
-
                 while(fgets(line, sizeof(line), fp) != NULL)
                 {
                         char *cfline;
                         cfline = strstr((char *)line,"= " );
                         cfline = strstr((char *)cfline," " );
-    
                         if (i == 0)
-						{
                                 memcpy(url_a,cfline,strlen(cfline));
-                        } 
 						else if (i == 1)
-						{
                                  memcpy(port_a,cfline,strlen(cfline));
-                        } 
-						else if (i == 2){
+						else if (i == 2)
                                  memcpy(topic_a,cfline,strlen(cfline));
-						}
                         i++;
                 }
 		  fclose(fp);  
@@ -150,8 +143,6 @@ void ParseCfgFile(char * filename)
 							topic_a[i] = '\0';
 				}
 		}
-		
-        
 }
 
 void fail( const char* message, tibemsErrorContext errContext)
@@ -210,6 +201,7 @@ void xor_encrypt(const char * string, char * value)
 		value[i] = string[i] ^ key;
 	}
 }
+
 void print_bytes(const void *object, size_t size)
 {
   size_t i;
@@ -221,6 +213,7 @@ void print_bytes(const void *object, size_t size)
   }
   printf("]");
 }
+
 void printMessages( const char * message)
 {
 	int i; 
@@ -254,8 +247,33 @@ void printMessages( const char * message)
 	fflush(stdout);
 	
 }
+
+void changeRoom(char * roomAdress)
+{
+    tibems_status               status      = TIBEMS_OK;
+    status = tibemsDestination_Destroy(destination);
+     if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgConsumer", errorContext);
+     status = tibemsTopic_Create(&destination,roomAdress);
+    if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgConsumer", errorContext);
+    status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
+    if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgConsumer", errorContext);
+    SendMessage(stradd(username," has changed rooms\n"));
+    status = tibemsSession_CreateProducer(session,&msgProducer,destination);
+    if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgProducer", errorContext);
+}
+
+void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO/////////////////////////////
+{
+    
+}
+
 void commandoRemote(const char * message)
 {
+    printMessages(stradd("Remote Commando: ",message));
 	char * commando = strtok((char *)message, " /\n");
 	if(strcmp(commando,"cmd" ) == 0)
 	{
@@ -265,28 +283,36 @@ void commandoRemote(const char * message)
 			commando =  strtok(NULL, " /\n");
 			if(strcmp(commando,username ) == 0)
 			{
-				
 				remoteUsername =  strtok(NULL, " /\n");
 				if(remoteUsername != NULL){
 					fileLocation = strtok(NULL, " /\n");
-					printMessages(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
-					printMessages(("If so type: \" /sendFile accept\" or else \" /sendFile deny \""));}
-				
-			}
-		 	else if(strcmp(commando,"accept" )== 0)
-			{
-				
-			}
-		 	else if(strcmp(commando,"deny")== 0)
-			{
-				
-			}
-		 	else
-			{
-				printMessages(username);
-			}
-								  
+                    if(fileLocation != NULL)
+                    {
+                        printMessages(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
+                        printMessages(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+                    }
+                }
+			}					  
 		}
+        else if (strcmp(commando, "receiveFile")==0)
+        {
+            printMessages(stradd("Remote Commando: ",commando));
+            commando =  strtok(NULL, " /\n");
+            if(strcmp(commando, username)==0)
+            {
+                 printMessages(stradd("Remote 2Commando: ",commando));
+                commando =  strtok(NULL, " /\n");
+                if(strcmp(commando,"accept" )== 0)
+			    {
+					printMessages(stradd(remoteUsername," accepted your file transfer"));
+                    changeRoom(stradd("InChat.FileTransfer.",remoteUsername));
+			    }
+		 	    else if(strcmp(commando,"deny")== 0)
+			    {
+					printMessages(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+			    }
+            }
+        }
 		
 	}
 	else 
@@ -312,12 +338,12 @@ void commandoLocal(const char * message)
 		printMessages("help : Dit scherm");
 		printMessages("\x1B[31mCommando's zijn: ");
 	}
-	else if(strcmp(commando,"changeUsername" ) == 0)
+	else if(strcmp(commando,"changeUsername" ) == 0 || strcmp(commando,"cu" ) == 0 )
 	{
 		commando =  strtok(NULL, " /\n");
 		if(commando != NULL)
 		{
-			username = commando;
+			strcpy(username,commando);
 			prefix = stradd(username, ": ");
 			printMessages("\x1B[32mUsername Changed\x1B[0m");
 			SendMessage(stradd(username," heeft zich aangemeld!\n"));
@@ -329,33 +355,42 @@ void commandoLocal(const char * message)
 	}
 	else if(strcmp(commando,"sendFile" ) == 0)
 	{
-		char * receiver =  strtok(NULL, " /\n");
-		if(receiver != NULL)
+		remoteUsername =  strtok(NULL, " /\n");
+		if(remoteUsername != NULL)
 		{
-			char * fileName = strtok(NULL, " /\n");
-			if(fileName != NULL)
-			{
-				SendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(receiver, " "),stradd(stradd(username," "),fileName)))))," ~"));
-			}
-			else if(strcmp(receiver,"accept") == 0)
-			{
-				//SendMessage(stradd(stradd("/cmd ",
-			}
-			else if(strcmp(receiver,"deny") == 0)
-			{
-				
-			}
+			fileLocation = strtok(NULL, " /\n");
+			if(fileLocation != NULL)
+				SendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
 			else
-			{
-				printMessages("\x1B[32mSend file command syntax is: /sendFile <to> <file>\x1B[0m");
-			}
-			
+				printMessages("\x1B[32mSend file command syntax is: /sendFile <<username>/accept/deny> <file>\x1B[0m");
 		}
 		else
-		{
 			printMessages("\x1B[32mSend file command syntax is: /sendFile <to> <file>\x1B[0m");
-		}
 	}
+    else if(strcmp(commando,"receiveFile" ) == 0)
+    {
+        char * awnser =  strtok(NULL, " /\n");
+        if(awnser != NULL)
+        {
+            if(strcmp(awnser,"accept") == 0)
+            {
+                SendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " accept "), "~"));
+                changeRoom(stradd("InChat.FileTransfer.",username));
+            }
+            else if(strcmp(awnser,"deny") == 0)
+                SendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
+        }
+    }
+    else if(strcmp(commando,"changeRoom" ) == 0)
+    {
+        
+        commando =  strtok(NULL, " /\n");
+        if(commando != NULL)
+           changeRoom(stradd("InChat.Rooms.Public.",commando));
+		else
+			printMessages("\x1B[32mGive a new room name\x1B[0m");
+        
+    }
 	else
 	{
 		printMessages("\x1B[32mUnknown Commando\x1B[0m");
@@ -611,8 +646,8 @@ void run()
         if (status != TIBEMS_OK) 
             fail("Error settin24g pk password", errorContext);
     }
-    status = tibemsConnectionFactory_CreateConnection(factory,&connection,"admin","admin");
-	status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin","admin");
+    status = tibemsConnectionFactory_CreateConnection(factory,&connection,"hylco","Hylcos");
+	status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin",NULL);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsConnection", errorContext);
 	
@@ -674,7 +709,6 @@ void run()
 		else 
 		{
 		
-			printf("%s , %d",my_string,strlen(my_string));
 			SendMessage(stradd(prefix, my_string));
 			printf("\033[2K");
 			fflush(stdout);
