@@ -2,7 +2,7 @@
 
 CC = gcc
 OPT_DBG_FLAGS = -g -ggdb
-INCFILES=-I include -I include/tibems
+INCFILES=-I include -I include/tibems -I $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 
 #
@@ -23,9 +23,13 @@ LIBS=  $(TIBEMS_LIB64) $(TIBEMSADMIN_LIB64) $(TIBEMS_LDAP_LIB64) $(TIBEMS_XML_LI
 LDFLAGS= -L lib/64 -L lib -m64
 
 
+
 all: Main 
 
 
 Main: main.c
 	$(CC) $(LDFLAGS) $(CFLAGS) main.c  $(LIBS) -o $@
+#	LD_LIBRARY_PATH=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/lib/64
+#	export @LD_LIBRARY_PATH
+#	@echo $(LD_LIBRARY_PATH) or LD_LIBRARY_PATH
 

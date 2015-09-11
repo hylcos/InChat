@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
@@ -50,6 +51,13 @@ char*                           userName     = NULL;
 char*                           password     = NULL;
 char*                           pk_password  = NULL;
 int								counter      = 1;
+
+/*-----------------------------------------------------------------------
+ * variables for receiving files
+ *----------------------------------------------------------------------*/
+char *							remoteUsername 		= NULL;
+bool							busyWithFiles 	= false;
+char *							fileLocation 	= NULL;
 
 void SendMessage(char * message);
 
@@ -202,12 +210,22 @@ void xor_encrypt(const char * string, char * value)
 		value[i] = string[i] ^ key;
 	}
 }
+void print_bytes(const void *object, size_t size)
+{
+  size_t i;
 
+  printf("[");
+  for(i = 0; i < size; i++)
+  {
+    printf("%02x", ((const unsigned char *) object)[i] & 0xff);
+  }
+  printf("]");
+}
 void printMessages( const char * message)
 {
-	int i;
+	int i; 
 	printf("\e[H\e[2J");
-	for( i = 23; i >0; i--) 
+	for( i = 23; i > 0; i--) 
 	{
 		fflush(stdout);
 		if(Messages[i-1] != NULL){
@@ -216,18 +234,68 @@ void printMessages( const char * message)
 		}
 	}
 	strcpy(Messages[0],message);
+	Messages[0][strlen(message)] ='\0';
 	for( i = 0 ; i < 23; i++)
 	{
 		printf("\033[%d;1H",i+2);
-		printf(" %s" ,Messages[i]);
+		int j;
+		for(j = 0;j < strlen(Messages[i]);j++)
+		{
+			if(Messages[i][j] != '~')
+				printf("%c",Messages[i][j]);
+			else
+				j+=strlen(Messages[i]);
+		}	
+		//}
 		fflush(stdout);
 	}
 	fflush(stdout);
 	printf("\033[H"); 
 	fflush(stdout);
+	
+}
+void commandoRemote(const char * message)
+{
+	char * commando = strtok((char *)message, " /\n");
+	if(strcmp(commando,"cmd" ) == 0)
+	{
+		commando =  strtok(NULL, " /\n");
+		if(strcmp(commando,"sendFile" ) == 0)
+		{
+			commando =  strtok(NULL, " /\n");
+			if(strcmp(commando,username ) == 0)
+			{
+				
+				remoteUsername =  strtok(NULL, " /\n");
+				if(remoteUsername != NULL){
+					fileLocation = strtok(NULL, " /\n");
+					printMessages(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
+					printMessages(("If so type: \" /sendFile accept\" or else \" /sendFile deny \""));}
+				
+			}
+		 	else if(strcmp(commando,"accept" )== 0)
+			{
+				
+			}
+		 	else if(strcmp(commando,"deny")== 0)
+			{
+				
+			}
+		 	else
+			{
+				printMessages(username);
+			}
+								  
+		}
+		
+	}
+	else 
+	{
+		return;
+	}
 }
 
-void commandoRecieved(const char * message)
+void commandoLocal(const char * message)
 {
 	
 	printMessages(stradd("Commando: ",message));
@@ -252,30 +320,59 @@ void commandoRecieved(const char * message)
 			username = commando;
 			prefix = stradd(username, ": ");
 			printMessages("\x1B[32mUsername Changed\x1B[0m");
-			SendMessage(stradd(username," heeft zich aangemeld!"));
+			SendMessage(stradd(username," heeft zich aangemeld!\n"));
 		}
 		else
 		{
 			printMessages("\x1B[32mGive a new username\x1B[0m");
 		}
 	}
+	else if(strcmp(commando,"sendFile" ) == 0)
+	{
+		char * receiver =  strtok(NULL, " /\n");
+		if(receiver != NULL)
+		{
+			char * fileName = strtok(NULL, " /\n");
+			if(fileName != NULL)
+			{
+				SendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(receiver, " "),stradd(stradd(username," "),fileName)))))," ~"));
+			}
+			else if(strcmp(receiver,"accept") == 0)
+			{
+				//SendMessage(stradd(stradd("/cmd ",
+			}
+			else if(strcmp(receiver,"deny") == 0)
+			{
+				
+			}
+			else
+			{
+				printMessages("\x1B[32mSend file command syntax is: /sendFile <to> <file>\x1B[0m");
+			}
+			
+		}
+		else
+		{
+			printMessages("\x1B[32mSend file command syntax is: /sendFile <to> <file>\x1B[0m");
+		}
+	}
 	else
 	{
 		printMessages("\x1B[32mUnknown Commando\x1B[0m");
-		commandoRecieved("help");
 	}
+	
 }
 
 void * recieveMessage(void * ptr)
 {
-	
+	const char*                 txt         = NULL;
 	while(1){
 		tibems_status               status      = TIBEMS_OK;
 		tibemsMsg                   msg         = NULL;
 
 		tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
 		char*                       msgTypeName = "UNKNOWN";
-		const char*                 txt         = NULL;
+		
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
         if (status != TIBEMS_OK)
         {
@@ -374,6 +471,9 @@ void * recieveMessage(void * ptr)
 			if(strncmp(_txt, stradd("@",username),strlen(username)+1) == 0)
 				printMessages(value);
 		}
+		else if(strstr(value,"/cmd") != NULL){
+			commandoRemote(value);
+		}
 		else
 		{
 			printMessages(value);
@@ -429,11 +529,18 @@ void * monitorMessages(void * ptr)
 
 void SendMessage(char * message)
 {	
-	
+		int i= 0;
+		while(message[i]!='\0')
+			{
+				   if(message[i]=='\n')
+				   {
+					   message[i]='~';
+				   }  
+				   i++; 
+			 }
 		char value[1024];
 		xor_encrypt(message,value);
-	//printMessages(value);
-	//printMessages(message);
+			
 		
 	 	tibems_status               status      = TIBEMS_OK;
     	tibemsMsg                   msg         = NULL;
@@ -444,7 +551,7 @@ void SendMessage(char * message)
         }
         
         /* set the message text */
-        status = tibemsTextMsg_SetText(msg,value);
+        status = tibemsTextMsg_SetText(msg,value); 
         if (status != TIBEMS_OK)
         {
             fail("Error setting tibemsTextMsg text", errorContext);
@@ -469,7 +576,7 @@ void SendMessage(char * message)
         }
 		usleep(10);	
 	
-		printf("\033[H"); 
+		printf("\033[24;1H"); 
 }
 
 void run() 
@@ -479,49 +586,33 @@ void run()
     tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
     char*                       msgTypeName = "UNKNOWN";
     
-    if (!topic_a)
-        printf("***Error: must specify destination name\n");
-    
     status = tibemsErrorContext_Create(&errorContext);
 
     if (status != TIBEMS_OK)
     {
         printf(" ErrorContext create failed: %s\n", tibemsStatus_GetText(status));
-        exit(1);
+        //exit(1);
     }
     factory = tibemsConnectionFactory_Create();
     if (!factory)
         fail("Error creating tibemsConnectionFactory", errorContext);
 	
-	d_factory = tibemsConnectionFactory_Create();
-    if (!d_factory)
-        fail("Error creating tibemsConnectionFactory", errorContext);
-	
     status = tibemsConnectionFactory_SetServerURL(factory,url_a);
 	 if (status != TIBEMS_OK) 
-        fail("Error setting server url", errorContext);
-	status = tibemsConnectionFactory_SetServerURL(d_factory,url_a);
-    if (status != TIBEMS_OK) 
         fail("Error setting server url", errorContext);
 	
     if(sslParams)
     {
         status = tibemsConnectionFactory_SetSSLParams(factory,sslParams);
-		  if (status != TIBEMS_OK)
+		if (status != TIBEMS_OK)
             fail("Error setting ssl params", errorContext);
-		status = tibemsConnectionFactory_SetSSLParams(d_factory,sslParams);
-        if (status != TIBEMS_OK)
-            fail("Error setting ssl params", errorContext);
-		status = tibemsConnectionFactory_SetPkPassword(d_factory,pk_password);
-		 if (status != TIBEMS_OK) 
-            fail("Error settin24g pk password", errorContext);
+	
         status = tibemsConnectionFactory_SetPkPassword(factory,pk_password);
-		
         if (status != TIBEMS_OK) 
             fail("Error settin24g pk password", errorContext);
     }
     status = tibemsConnectionFactory_CreateConnection(factory,&connection,"admin","admin");
-	status = tibemsConnectionFactory_CreateConnection(d_factory,&d_connection,"admin","admin");
+	status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin","admin");
     if (status != TIBEMS_OK)
         fail("Error creating tibemsConnection", errorContext);
 	
@@ -570,7 +661,7 @@ void run()
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	
-	SendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m")));
+	SendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m\n")));
 	size_t nbytes = 1024;
 	while(1)
 	{
@@ -579,9 +670,11 @@ void run()
 		printf("\033[H"); 
 		bytes_read = getline(&my_string, &nbytes, stdin);
 		if(my_string[0] == '/')
-			commandoRecieved(my_string);
+			commandoLocal(my_string);
 		else 
 		{
+		
+			printf("%s , %d",my_string,strlen(my_string));
 			SendMessage(stradd(prefix, my_string));
 			printf("\033[2K");
 			fflush(stdout);
@@ -603,8 +696,15 @@ void run()
     tibemsErrorContext_Close(errorContext);
 }
 
-int main ()
+int main (int argc, char * argv[])
 {
+
+	if(argc == 1)
+	{
+		//system("gnome-terminal --geometry=80x24 -e \"./Main true\" ");
+		printf("\033[2J");
+		//exit(1);
+	}	
 	username = getpwuid(geteuid ())->pw_name;
 	prefix = stradd(username, ": ");
 	
@@ -613,7 +713,7 @@ int main ()
 	
 	ParseCfgFile("Inchat.cfg");
 	
-	printf("\e[1;1H\e[2J");
+	printf("\033[2J");
 	fflush(stdout);
 	
 	run();
