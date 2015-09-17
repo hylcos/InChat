@@ -18,6 +18,8 @@ You'll also need a tibco user called admin with the password admin for login fro
 
 #### Compiling from source
 Download the latest release version from this program.
-Unzip the downloaded file and add (LOCATION TO GIT)/lib/linux/64 to your PATH
+
+Unzip the downloaded file and add (LOCATION TO GIT)/lib/linux/64 to your PATH.
+
 Run make (If it doesn't compile send me a message)
 #### Downloading the RPM (Not Done Yet)
