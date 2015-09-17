@@ -34,6 +34,19 @@ Run make (If it doesn't compile send me a message)
 
 
 ## Config File
+Added in the RPM(Not Done Yet) and release versions is a InChat.cfg. This config file contains three basic settings
+* url  : which is the url on which the EMS Server is
+* port : which is the port number on which the EMS Server runs. (Default number is 7222)
+* topic: the room you want to start in. (Default topic adress is InChat.Rooms.Public.Main)
 
+If you want to enter a private room you will have to change the topic to InChat.Rooms.Private. (PRIVATE_ROOM_NAME)
+You have to change to topic here because the /changeRoom commando only transfers you to Public rooms.
 
 ## Commando's
+There are several different basic commandos in InChat, these are all excecuted with /(COMMANDO) (PARAMETERS):
+* changeUsername / cu (NAME): This commando lets you change username.
+* exit                      : exits the program
+* help                      : show the help menu with all the commandos and parameters
+* changeRoom (ROOM NAME)    : lets you change rooms. Works only with public rooms. If you want to switch to a private room, you'll have to change the InChat.cfg file and restart the program
+* sendFile                  :
+* receiveFile               :
