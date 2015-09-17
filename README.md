@@ -1,7 +1,14 @@
-##  What is InChat
-In chat i basicly a program that connects to a local/remote [EMS server.](http://www.tibco.com/products/automation/enterprise-messaging/enterprise-message-service) 
+#  What is InChat
+In chat is basicly a program that connects to a local/remote [EMS server.](http://www.tibco.com/products/automation/enterprise-messaging/enterprise-message-service) 
 
-
+* [Setup](#setup)
+  * [Server Side](#server-side)
+  * [Client Side](#client-side)
+    * [Compiling From Source](#compiling-from-source)
+    * [Downloading the RPM ](#downloading-the-rpm)
+* [Config File](#config-file)
+* [Commando's](#commandos)
+    
 ##  Setup
 There are (like almost every programs) actions to be done to be actually able to run the program
 ### Server Side
@@ -22,4 +29,11 @@ Download the latest release version from this program.
 Unzip the downloaded file and add (LOCATION TO GIT)/lib/linux/64 to your PATH.
 
 Run make (If it doesn't compile send me a message)
-#### Downloading the RPM (Not Done Yet)
+#### Downloading the RPM 
+(Not Done Yet)
+
+
+## Config File
+
+
+## Commando's
