@@ -266,8 +266,20 @@ void changeRoom(char * roomAdress)
         fail("Error creating tibemsMsgProducer", errorContext);
 }
 
-void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO/////////////////////////////
+void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO///////////////////////////// Moeilijk heden
 {
+	/*if(side == true) //Sender of the file
+	{
+		int fd_from = open(fileName, O_RDONLY);
+		 while (nread = read(fd_from, buf, sizeof buf), nread > 0)
+		{
+			
+		}
+	} 
+	else 
+	{ //receiver of the file
+		int fd_to = open(stradd("received/",to), O_WRONLY | O_CREAT | O_EXCL, 0666);
+	}*/
     
 }
 
@@ -306,6 +318,7 @@ void commandoRemote(const char * message)
 			    {
 					printMessages(stradd(remoteUsername," accepted your file transfer"));
                     changeRoom(stradd("InChat.FileTransfer.",remoteUsername));
+					busyWithFiles = true;
 			    }
 		 	    else if(strcmp(commando,"deny")== 0)
 			    {
@@ -376,6 +389,7 @@ void commandoLocal(const char * message)
             {
                 SendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " accept "), "~"));
                 changeRoom(stradd("InChat.FileTransfer.",username));
+				busyWithFiles = true;
             }
             else if(strcmp(awnser,"deny") == 0)
                 SendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
@@ -646,8 +660,8 @@ void run()
         if (status != TIBEMS_OK) 
             fail("Error settin24g pk password", errorContext);
     }
-    status = tibemsConnectionFactory_CreateConnection(factory,&connection,"hylco","Hylcos");
-	status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin",NULL);
+    status = tibemsConnectionFactory_CreateConnection(factory,&connection,"admin","admin");
+	status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin","admin" );
     if (status != TIBEMS_OK)
         fail("Error creating tibemsConnection", errorContext);
 	
