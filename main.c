@@ -4,7 +4,9 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#ifdef __linux__
 #include <pwd.h>
+#endif
 
 #include "tibemsUtilities.h"
 
@@ -58,6 +60,14 @@ int								counter      = 1;
 char *							remoteUsername 		= NULL;
 bool							busyWithFiles 	= false;
 char *							fileLocation 	= NULL;
+
+/*-----------------------------------------------------------------------
+ * variables for checking who is in the same room as you
+ *----------------------------------------------------------------------*/
+int 							userCount	 = 0;
+int								userCountHad = 0;
+char 							userNames[MAXBUF][MAXBUF];
+tibemsTopicInfo *				topicInfo	 = NULL;	
 
 void SendMessage(char * message);
 
@@ -222,7 +232,6 @@ void printMessages( const char * message)
 	{
 		fflush(stdout);
 		if(Messages[i-1] != NULL){
-			
 			strcpy(Messages[i],Messages[i-1]);
 		}
 	}
@@ -239,7 +248,7 @@ void printMessages( const char * message)
 			else
 				j+=strlen(Messages[i]);
 		}	
-		//}
+		
 		fflush(stdout);
 	}
 	fflush(stdout);
@@ -326,7 +335,30 @@ void commandoRemote(const char * message)
 			    }
             }
         }
-		
+		else if (strcmp(commando, "whoison")==0)
+        {
+            char * whoasks =  strtok(NULL, " /\n");
+			SendMessage(stradd(stradd(stradd(stradd("/cmd ","iamon "),whoasks),username), "~"));
+        }
+		else if (strcmp(commando, "iamon")==0)
+        {
+			 char * whoasks =  strtok(NULL, " /\n");
+			 if(strcmp(whoasks,username)==0)
+			 { 
+				char * whosays =  strtok(NULL, " /\n");
+				strcpy(whosays,userNames[userCountHad]);				
+				userCountHad+=1;
+				if (userCountHad == userCount)
+				{
+					int i = 0;
+					printMessages("Users who are online: ");
+					for(i = 0 ; i <userCount;i++)
+					{
+						printMessages(userNames[i]);
+					}
+				}
+			 }
+		}
 	}
 	else 
 	{
@@ -340,6 +372,7 @@ void commandoLocal(const char * message)
 	printMessages(stradd("Commando: ",message));
 	char * commando = strtok((char *)message, " /\n");
 	char * wow = " quit";
+	
 	if(strcmp(commando,"quit" ) == 0)
 	{
 		exit(1);
@@ -403,6 +436,16 @@ void commandoLocal(const char * message)
            changeRoom(stradd("InChat.Rooms.Public.",commando));
 		else
 			printMessages("\x1B[32mGive a new room name\x1B[0m");
+        
+    }
+	else if(strcmp(commando,"users" ) == 0 || strcmp(commando,"whoison" ) == 0)
+    {
+		SendMessage(stradd(stradd(stradd("/cmd ","whoison "),remoteUsername), "~"));
+		char * dest = NULL;
+		//tibemsTopic_getName(destination, dest, TIBEMS_DESTINATION_MAX);
+		tibemsTopicInfo_Create(topicInfo,"InChat.Rooms.Public.Main");
+		tibemsTopicInfo_GetSubscriberCount(*topicInfo, &userCount);
+		printf("%d",userCount);
         
     }
 	else
@@ -753,7 +796,12 @@ int main (int argc, char * argv[])
 		printf("\033[2J");
 		//exit(1);
 	}	
+	
+	#ifdef __linux__
 	username = getpwuid(geteuid ())->pw_name;
+	#elseif _WIN64
+	username = getenv("USERNAME");
+	#endif
 	prefix = stradd(username, ": ");
 	
   	printlogo();
