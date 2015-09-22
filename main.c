@@ -368,12 +368,12 @@ void commandoRemote(const char * message)
             char * what =  strtok(NULL, " /\n~");
                 if(strcmp(what,"up" )== 0)
 			    {
-					userCount++;
+					//userCount++;
 					printMessages("Count UP ");
 			    }
 		 	    else if(strcmp(what,"down")== 0)
 			    {
-					userCount--;
+					//userCount--;
 					printMessages("Count DOWN ");
 			    }
         }
@@ -640,7 +640,7 @@ void * monitorMessages(void * ptr)
 			{
 				tibemsMsgField * fld = &field;
 				printMessages(stradd("\x1B[33m",stradd(fld->data.utf8Value, "\x1B[34m heeft zich afgemeld!\x1B[0m")));
-				userCount--;
+				//userCount--;
 				printf("\n");
 			}
 		
