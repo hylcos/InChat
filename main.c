@@ -6,7 +6,7 @@
 #include <unistd.h>
 #ifdef __linux__
 #include <pwd.h>
-#endif
+#endif 
 
 #include "tibemsUtilities.h"
 
@@ -41,7 +41,7 @@ tibemsErrorContext              errorContext = NULL;
 //for $sys.monitor.producer.destroy
 tibemsConnectionFactory         d_factory      = NULL;
 tibemsConnection                d_connection   = NULL;
-tibemsSession                   d_session      = NULL;
+tibemsSession                   d_session      = NULL; 
 tibemsMsgConsumer               d_msgConsumer  = NULL;
 tibemsDestination               d_destination  = NULL;
 
@@ -54,7 +54,7 @@ char*                           password     = NULL;
 char*                           pk_password  = NULL;
 int								counter      = 1;
 
-/*-----------------------------------------------------------------------
+/*----------------------------------------------------------------------- 
  * variables for receiving files
  *----------------------------------------------------------------------*/
 char *							remoteUsername 		= NULL;
@@ -67,7 +67,7 @@ char *							fileLocation 	= NULL;
 int 							userCount	 = 0;
 int								userCountHad = 0;
 char 							userNames[MAXBUF][MAXBUF];
-tibemsTopicInfo *				topicInfo	 = NULL;	
+tibemsTopicInfo 				topicInfo	 = NULL;	
 
 void SendMessage(char * message);
 
@@ -260,6 +260,7 @@ void printMessages( const char * message)
 void changeRoom(char * roomAdress)
 {
     tibems_status               status      = TIBEMS_OK;
+	SendMessage(stradd(username," has changed rooms\n"));
     status = tibemsDestination_Destroy(destination);
      if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
@@ -269,10 +270,12 @@ void changeRoom(char * roomAdress)
     status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
-    SendMessage(stradd(username," has changed rooms\n"));
+    SendMessage("/cmd userCountChanged down");
+	
     status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
+	SendMessage("/cmd userCountChanged up");
 }
 
 void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO///////////////////////////// Moeilijk heden
@@ -294,8 +297,8 @@ void FileTransfer(char * fileName, bool side) //////////////////////////////////
 
 void commandoRemote(const char * message)
 {
-    printMessages(stradd("Remote Commando: ",message));
-	char * commando = strtok((char *)message, " /\n");
+    //printMessages(stradd("Remote Commando: ",message));
+	char * commando = strtok((char *)message, " /\n~");
 	if(strcmp(commando,"cmd" ) == 0)
 	{
 		commando =  strtok(NULL, " /\n");
@@ -337,28 +340,43 @@ void commandoRemote(const char * message)
         }
 		else if (strcmp(commando, "whoison")==0)
         {
-            char * whoasks =  strtok(NULL, " /\n");
-			SendMessage(stradd(stradd(stradd(stradd("/cmd ","iamon "),whoasks),username), "~"));
+            char * whoasks =  strtok(NULL, " /\n~");
+			SendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","iamon "),whoasks), " "),username), " ~"));
         }
 		else if (strcmp(commando, "iamon")==0)
         {
-			 char * whoasks =  strtok(NULL, " /\n");
+			 char * whoasks =  strtok(NULL, " /\n~");
 			 if(strcmp(whoasks,username)==0)
 			 { 
-				char * whosays =  strtok(NULL, " /\n");
-				strcpy(whosays,userNames[userCountHad]);				
+				char * whosays =  strtok(NULL, " /\n~");
+				strcpy(userNames[userCountHad],whosays);				
 				userCountHad+=1;
 				if (userCountHad == userCount)
 				{
 					int i = 0;
-					printMessages("Users who are online: ");
 					for(i = 0 ; i <userCount;i++)
 					{
 						printMessages(userNames[i]);
 					}
+					printMessages("Users who are online: ");
+					userCountHad = 0;
 				}
 			 }
 		}
+		else if (strcmp(commando, "userCountChanged")==0)
+        {
+            char * what =  strtok(NULL, " /\n~");
+                if(strcmp(what,"up" )== 0)
+			    {
+					userCount++;
+					printMessages("Count UP ");
+			    }
+		 	    else if(strcmp(what,"down")== 0)
+			    {
+					userCount--;
+					printMessages("Count DOWN ");
+			    }
+        }
 	}
 	else 
 	{
@@ -368,13 +386,13 @@ void commandoRemote(const char * message)
 
 void commandoLocal(const char * message)
 {
-	
-	printMessages(stradd("Commando: ",message));
 	char * commando = strtok((char *)message, " /\n");
 	char * wow = " quit";
-	
+	if(commando == NULL)
+		return;
 	if(strcmp(commando,"quit" ) == 0)
 	{
+		SendMessage("/cmd userCountChanged down");
 		exit(1);
 	}
 	else if (strcmp(commando,"help") == 0)
@@ -389,6 +407,7 @@ void commandoLocal(const char * message)
 		commando =  strtok(NULL, " /\n");
 		if(commando != NULL)
 		{
+			SendMessage(stradd(username," heeft zich afgemeld!\n"));
 			strcpy(username,commando);
 			prefix = stradd(username, ": ");
 			printMessages("\x1B[32mUsername Changed\x1B[0m");
@@ -438,14 +457,26 @@ void commandoLocal(const char * message)
 			printMessages("\x1B[32mGive a new room name\x1B[0m");
         
     }
-	else if(strcmp(commando,"users" ) == 0 || strcmp(commando,"whoison" ) == 0)
+	else if(strcmp(commando,"users" ) == 0)
     {
-		SendMessage(stradd(stradd(stradd("/cmd ","whoison "),remoteUsername), "~"));
+		tibems_status               status      = TIBEMS_OK;
+		SendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
 		char * dest = NULL;
-		//tibemsTopic_getName(destination, dest, TIBEMS_DESTINATION_MAX);
-		tibemsTopicInfo_Create(topicInfo,"InChat.Rooms.Public.Main");
-		tibemsTopicInfo_GetSubscriberCount(*topicInfo, &userCount);
-		printf("%d",userCount);
+		/*//tibemsDestination_GetName(destination, dest, TIBEMS_DESTINATION_MAX);
+		printf("%s",topic_a);
+		//status = tibemsTopicInfo_Create(&topicInfo,"InChat.Rooms.Public.Main");
+		 if (status != TIBEMS_OK)
+			 fail("Error destroying tibemsMsg", errorContext);	
+		int * oop = NULL;
+		//status = tibemsTopicInfo_GetName(topicInfo,dest,200);		 
+		if (status != TIBEMS_OK)
+			 fail("Error destroying tibemsMsg", errorContext);
+		printf("%s",dest);
+		//status =tibemsTopicInfo_GetSubscriberCount(topicInfo, oop);		
+		if (status != TIBEMS_OK)
+			 fail("Error destroying tibemsMsg", errorContext);
+		userCount = 2;*/
+		printf("%d",userCount); 
         
     }
 	else
@@ -609,6 +640,7 @@ void * monitorMessages(void * ptr)
 			{
 				tibemsMsgField * fld = &field;
 				printMessages(stradd("\x1B[33m",stradd(fld->data.utf8Value, "\x1B[34m heeft zich afgemeld!\x1B[0m")));
+				userCount--;
 				printf("\n");
 			}
 		
@@ -754,6 +786,7 @@ void run()
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	
 	SendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m\n")));
+	SendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
@@ -799,7 +832,7 @@ int main (int argc, char * argv[])
 	
 	#ifdef __linux__
 	username = getpwuid(geteuid ())->pw_name;
-	#elseif _WIN64
+	#elif _WIN64
 	username = getenv("USERNAME");
 	#endif
 	prefix = stradd(username, ": ");
