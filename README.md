@@ -39,6 +39,7 @@ Run make (If it doesn't compile send me a message)
 ##### Downloading the RPM 
 (Not Done Yet)
 #### Windows
+[This is the latest Windows Released Version](https://github.com/hylcos/InChat/releases/tag/v0.31-alpha-Windows)
 ##### Compiling from source
 Download the latest release version from this program.
 
