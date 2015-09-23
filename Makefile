@@ -2,9 +2,16 @@
 
 CC = gcc
 OPT_DBG_FLAGS = -g -ggdb
-INCFILES=-I include -I include/tibems -I $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+INCFILES=-I include -I include/tibems 
 
+ifeq ($(OS),Windows_NT)
+CFLAGS=$(OPT_DBG_FLAGS) $(INCFILES) 
 
+LDFLAGS= -L lib/windows 
+TIBEMS_LIB=-ltibems -ltibemslookup -ltibemsufo
+
+LIBS=  $(TIBEMS_LIB) $(TIBEMSADMIN_LIB64) $(TIBEMS_LDAP_LIB64) $(TIBEMS_XML_LIB64) $(TIBEMS_SSL_LIB64) $(TIBEMS_ZLIB64) $(TLIBS)
+else
 #
 # 64-bit libs
 #
@@ -18,9 +25,11 @@ TLIBS=-lpthread
 #
 # uncomment these overrides for x86_64 (non-ia64) platforms
 #
-CFLAGS=$(OPT_DBG_FLAGS) $(INCFILES) -m64
+
 LIBS=  $(TIBEMS_LIB64) $(TIBEMSADMIN_LIB64) $(TIBEMS_LDAP_LIB64) $(TIBEMS_XML_LIB64) $(TIBEMS_SSL_LIB64) $(TIBEMS_ZLIB64) $(TLIBS)
 LDFLAGS= -L lib/linux/64 -L lib/linux -m64
+CFLAGS=$(OPT_DBG_FLAGS) $(INCFILES) -m64
+endif
 
 
 

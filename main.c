@@ -8,7 +8,11 @@
 #include <unistd.h>
 #ifdef __linux__
 #include <pwd.h>
+#elif _WIN32
+#include <conio.h>
+#include <windows.h>
 #endif 
+
 
 #include "tibemsUtilities.h"
 
@@ -71,38 +75,17 @@ int								userCountHad = 0;
 char 							userNames[MAXBUF][MAXBUF];
 tibemsTopicInfo 				topicInfo	 = NULL;	
 
+/*-----------------------------------------------------------------------
+ * Windows Only variables
+ *----------------------------------------------------------------------*/
+ #ifdef _WIN32
+HANDLE hConsole;
+CONSOLE_SCREEN_BUFFER_INFO consoleInfo;
+WORD saved_attributes;
+#endif
+
 void sendMessage(char * message);
-char * getline(void) {
-    char * line = malloc(100), * linep = line;
-    size_t lenmax = 100, len = lenmax;
-    int c;
 
-    if(line == NULL)
-        return NULL;
-
-    for(;;) {
-        c = fgetc(stdin);
-        if(c == EOF)
-            break;
-
-        if(--len == 0) {
-            len = lenmax;
-            char * linen = realloc(linep, lenmax *= 2);
-
-            if(linen == NULL) {
-                free(linep);
-                return NULL;
-            }
-            line = linen + (line - linep);
-            linep = linen;
-        }
-
-        if((*line++ = c) == '\n')
-            break;
-    }
-    *line = '\0';
-    return linep;
-}
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -259,7 +242,11 @@ void print_bytes(const void *object, size_t size)
 void printMessages( const char * message)
 {
 	int i; 
+	#ifdef __linux__
 	printf("\e[H\e[2J");
+	#elif _WIN64
+	system("cls");
+	#endif 
 	for( i = 23; i > 0; i--) 
 	{
 		fflush(stdout);
@@ -271,7 +258,9 @@ void printMessages( const char * message)
 	Messages[0][strlen(message)] ='\0';
 	for( i = 0 ; i < 23; i++)
 	{
+		#ifdef __linux__
 		printf("\033[%d;1H",i+2);
+		#endif 
 		int j;
 		for(j = 0;j < strlen(Messages[i]);j++)
 		{
@@ -280,11 +269,15 @@ void printMessages( const char * message)
 			else
 				j+=strlen(Messages[i]);
 		}	
-		
+		#ifdef _WIN64
+		printf("\n");
+		#endif 
 		fflush(stdout);
 	}
 	fflush(stdout);
-	printf("\033[H"); 
+	#ifdef __linux__
+	printf("\033[H");
+	#endif 
 	fflush(stdout);
 	
 }
@@ -401,12 +394,12 @@ void commandoRemote(const char * message)
                 if(strcmp(what,"up" )== 0)
 			    {
 					//userCount++;
-					printMessages("Count UP ");
+					//printMessages("Count UP ");
 			    }
 		 	    else if(strcmp(what,"down")== 0)
 			    {
 					//userCount--;
-					printMessages("Count DOWN ");
+					//printMessages("Count DOWN ");
 			    }
         }
 	}
@@ -429,10 +422,11 @@ void commandoLocal(const char * message)
 	}
 	else if (strcmp(commando,"help") == 0)
 	{
-		printMessages("changeUsername <NAME> : gebruikersnaam veranderen\x1B[0m");
+	
+		printMessages("changeUsername <NAME> : gebruikersnaam veranderen");
 		printMessages("quit : Programma afsluiten");
 		printMessages("help : Dit scherm");
-		printMessages("\x1B[31mCommando's zijn: ");
+		printMessages("1mCommando's zijn: ");
 	}
 	else if(strcmp(commando,"changeUsername" ) == 0 || strcmp(commando,"cu" ) == 0 )
 	{
@@ -442,12 +436,12 @@ void commandoLocal(const char * message)
 			sendMessage(stradd(username," heeft zich afgemeld!\n"));
 			strcpy(username,commando);
 			prefix = stradd(username, ": ");
-			printMessages("\x1B[32mUsername Changed\x1B[0m");
+			printMessages("Username Changed");
 			sendMessage(stradd(username," heeft zich aangemeld!\n"));
 		}
 		else
 		{
-			printMessages("\x1B[32mGive a new username\x1B[0m");
+			printMessages("Give a new username");
 		}
 	}
 	else if(strcmp(commando,"sendFile" ) == 0)
@@ -459,10 +453,10 @@ void commandoLocal(const char * message)
 			if(fileLocation != NULL)
 				sendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
 			else
-				printMessages("\x1B[32mSend file command syntax is: /sendFile <<username>/accept/deny> <file>\x1B[0m");
+				printMessages("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
 		}
 		else
-			printMessages("\x1B[32mSend file command syntax is: /sendFile <to> <file>\x1B[0m");
+			printMessages("Send file command syntax is: /sendFile <to> <file>");
 	}
     else if(strcmp(commando,"receiveFile" ) == 0)
     {
@@ -486,7 +480,7 @@ void commandoLocal(const char * message)
         if(commando != NULL)
            changeRoom(stradd("InChat.Rooms.Public.",commando));
 		else
-			printMessages("\x1B[32mGive a new room name\x1B[0m");
+			printMessages("Give a new room name");
         
     }
 	else if(strcmp(commando,"users" ) == 0)
@@ -651,7 +645,9 @@ void * monitorMessages(void * ptr)
 	while(1){
 		
 		status = tibemsMsgConsumer_Receive(d_msgConsumer,&msg);
+		#ifdef __linux__
 		printf("\e[H\e[2J");
+		#endif 
 
 
         status = tibemsMsg_GetBodyType(msg,&msgType);
@@ -731,8 +727,9 @@ void sendMessage(char * message)
             fail("Error destroying tibemsTextMsg", errorContext);
         }
 		usleep(10);	
-	
+		#ifdef __linux__
 		printf("\033[24;1H"); 
+		#endif 
 }
 
 void run() 
@@ -816,23 +813,32 @@ void run()
 	
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
-	
+	#ifdef __linux__
 	sendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m\n")));
+	#elif _WIN64
+	sendMessage(stradd(username," heeft zich aangemeld!"));
+	#endif
 	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
 		int bytes_read;
 		char my_string[MAXBUF];
+		#ifdef __linux__
 		printf("\033[H"); 
-		//fgets(my_string, sizeof(my_string), stdin);
+		bytes_read = getline(&my_string,&nbytes,stdin);
+		#elif _WIN32
+		fgets(my_string, sizeof(my_string), stdin);
+		#endif
 		if(my_string[0] == '/')
 			commandoLocal(my_string);
 		else 
 		{
 		
 			sendMessage(stradd(prefix, my_string));
+			#ifdef __linux__
 			printf("\033[2K");
+			#endif 
 			fflush(stdout);
 		}
 	}
@@ -858,7 +864,7 @@ int main (int argc, char * argv[])
 	if(argc == 1)
 	{
 		//system("gnome-terminal --geometry=80x24 -e \"./Main true\" ");
-		printf("\033[2J");
+		//printf("\033[2J");
 		//exit(1);
 	}	
 	
@@ -866,15 +872,17 @@ int main (int argc, char * argv[])
 	username = getpwuid(geteuid ())->pw_name;
 	#elif _WIN64
 	username = getenv("USERNAME");
+	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
 	#endif
 	prefix = stradd(username, ": ");
 	
   	printlogo();
   	getchar();
-	
 	ParseCfgFile("Inchat.cfg");
-	
+	#ifdef __linux__
 	printf("\033[2J");
+	#endif 
 	fflush(stdout);
 	
 	run();
