@@ -35,7 +35,7 @@ Run make (If it doesn't compile send me a message)
 ##### Downloading the RPM 
 (Not Done Yet)
 #### Windows
-
+##### Compiling from source
 ## Config File
 Added in the RPM(Not Done Yet) and release versions is a InChat.cfg. This config file contains three basic settings
 * url  : which is the url on which the EMS Server is
