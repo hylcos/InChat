@@ -4,8 +4,10 @@ In chat is basicly a program that connects to a local/remote [EMS server.](http:
 * [Setup](#setup)
   * [Server Side](#server-side)
   * [Client Side](#client-side)
+   * [Linux](#linux)
     * [Compiling From Source](#compiling-from-source)
     * [Downloading the RPM ](#downloading-the-rpm)
+   * [Windows](#windows)
 * [Config File](#config-file)
 * [Commando's](#commandos)
     
@@ -22,16 +24,17 @@ The greater then symbol that users can generate dynamic rooms like InChat.Rooms.
 You'll also need a tibco user called admin with the password admin for login from the program. You can use your own users but you'll have to change the source code for that.
 
 ### Client Side
+#### Linux
+##### Compiling from source
 
-#### Compiling from source
 Download the latest release version from this program.
 
 Unzip the downloaded file and add (LOCATION TO GIT)/lib/linux/64 to your PATH.
 
 Run make (If it doesn't compile send me a message)
-#### Downloading the RPM 
+##### Downloading the RPM 
 (Not Done Yet)
-
+#### Windows
 
 ## Config File
 Added in the RPM(Not Done Yet) and release versions is a InChat.cfg. This config file contains three basic settings
