@@ -31,7 +31,7 @@ You'll also need a tibco user called admin with the password admin for login fro
 Download the latest release version from this program.
 Unzip the downloaded file and add this to your .bash_profile
 > LD_LIBRARY_PATH=/home/udingh/Projects/InChat/lib/linux/64
-> export LD_LIBRARY_PATH
+export LD_LIBRARY_PATH
 
 Run make (If it doesn't compile send me a message)
 ##### Downloading the RPM 
@@ -39,10 +39,13 @@ Run make (If it doesn't compile send me a message)
 #### Windows
 ##### Compiling from source
 Download the latest release version from this program.
+
 Unzip the downloaded file and add (LOCATION TO GIT)/bin to your PATH.
+
 Run make (If it doesn't compile send me a message)
 ##### Install
 Download the latest release version from this program.
+
 Unzip the downloaded file and add (LOCATION TO GIT)/bin to your PATH.
 > setx path "%path%;D:\InChat\bin"
 
