@@ -1,6 +1,8 @@
+
+#define _GNU_SOURCE
+#include <stdio.h> 
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
@@ -69,8 +71,38 @@ int								userCountHad = 0;
 char 							userNames[MAXBUF][MAXBUF];
 tibemsTopicInfo 				topicInfo	 = NULL;	
 
-void SendMessage(char * message);
+void sendMessage(char * message);
+char * getline(void) {
+    char * line = malloc(100), * linep = line;
+    size_t lenmax = 100, len = lenmax;
+    int c;
 
+    if(line == NULL)
+        return NULL;
+
+    for(;;) {
+        c = fgetc(stdin);
+        if(c == EOF)
+            break;
+
+        if(--len == 0) {
+            len = lenmax;
+            char * linen = realloc(linep, lenmax *= 2);
+
+            if(linen == NULL) {
+                free(linep);
+                return NULL;
+            }
+            line = linen + (line - linep);
+            linep = linen;
+        }
+
+        if((*line++ = c) == '\n')
+            break;
+    }
+    *line = '\0';
+    return linep;
+}
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -260,7 +292,7 @@ void printMessages( const char * message)
 void changeRoom(char * roomAdress)
 {
     tibems_status               status      = TIBEMS_OK;
-	SendMessage(stradd(username," has changed rooms\n"));
+	sendMessage(stradd(username," has changed rooms\n"));
     status = tibemsDestination_Destroy(destination);
      if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
@@ -270,12 +302,12 @@ void changeRoom(char * roomAdress)
     status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
-    SendMessage("/cmd userCountChanged down");
+    sendMessage("/cmd userCountChanged down");
 	
     status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
-	SendMessage("/cmd userCountChanged up");
+	sendMessage("/cmd userCountChanged up");
 }
 
 void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO///////////////////////////// Moeilijk heden
@@ -341,7 +373,7 @@ void commandoRemote(const char * message)
 		else if (strcmp(commando, "whoison")==0)
         {
             char * whoasks =  strtok(NULL, " /\n~");
-			SendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","iamon "),whoasks), " "),username), " ~"));
+			sendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","iamon "),whoasks), " "),username), " ~"));
         }
 		else if (strcmp(commando, "iamon")==0)
         {
@@ -392,7 +424,7 @@ void commandoLocal(const char * message)
 		return;
 	if(strcmp(commando,"quit" ) == 0)
 	{
-		SendMessage("/cmd userCountChanged down");
+		sendMessage("/cmd userCountChanged down");
 		exit(1);
 	}
 	else if (strcmp(commando,"help") == 0)
@@ -407,11 +439,11 @@ void commandoLocal(const char * message)
 		commando =  strtok(NULL, " /\n");
 		if(commando != NULL)
 		{
-			SendMessage(stradd(username," heeft zich afgemeld!\n"));
+			sendMessage(stradd(username," heeft zich afgemeld!\n"));
 			strcpy(username,commando);
 			prefix = stradd(username, ": ");
 			printMessages("\x1B[32mUsername Changed\x1B[0m");
-			SendMessage(stradd(username," heeft zich aangemeld!\n"));
+			sendMessage(stradd(username," heeft zich aangemeld!\n"));
 		}
 		else
 		{
@@ -425,7 +457,7 @@ void commandoLocal(const char * message)
 		{
 			fileLocation = strtok(NULL, " /\n");
 			if(fileLocation != NULL)
-				SendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
+				sendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
 			else
 				printMessages("\x1B[32mSend file command syntax is: /sendFile <<username>/accept/deny> <file>\x1B[0m");
 		}
@@ -439,12 +471,12 @@ void commandoLocal(const char * message)
         {
             if(strcmp(awnser,"accept") == 0)
             {
-                SendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " accept "), "~"));
+                sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " accept "), "~"));
                 changeRoom(stradd("InChat.FileTransfer.",username));
 				busyWithFiles = true;
             }
             else if(strcmp(awnser,"deny") == 0)
-                SendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
+                sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
         }
     }
     else if(strcmp(commando,"changeRoom" ) == 0)
@@ -460,7 +492,7 @@ void commandoLocal(const char * message)
 	else if(strcmp(commando,"users" ) == 0)
     {
 		tibems_status               status      = TIBEMS_OK;
-		SendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
+		sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
 		char * dest = NULL;
 		/*//tibemsDestination_GetName(destination, dest, TIBEMS_DESTINATION_MAX);
 		printf("%s",topic_a);
@@ -651,7 +683,7 @@ void * monitorMessages(void * ptr)
 	}
 }
 
-void SendMessage(char * message)
+void sendMessage(char * message)
 {	
 		int i= 0;
 		while(message[i]!='\0')
@@ -785,21 +817,21 @@ void run()
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	
-	SendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m\n")));
-	SendMessage("/cmd userCountChanged up ~");
+	sendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m\n")));
+	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
 		int bytes_read;
-		char* my_string;
+		char my_string[MAXBUF];
 		printf("\033[H"); 
-		bytes_read = getline(&my_string, &nbytes, stdin);
+		//fgets(my_string, sizeof(my_string), stdin);
 		if(my_string[0] == '/')
 			commandoLocal(my_string);
 		else 
 		{
 		
-			SendMessage(stradd(prefix, my_string));
+			sendMessage(stradd(prefix, my_string));
 			printf("\033[2K");
 			fflush(stdout);
 		}

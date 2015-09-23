@@ -19,13 +19,11 @@
 #include <tibems/emsadmin.h>
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN64)
 
-#  ifndef _WIN32_WINNT
-#    define _WIN32_WINNT 0x0400
+#  
 #    include <windows.h>
 #    include <process.h>
-#  endif
 
 #  define THREAD_RETVAL         unsigned __stdcall
 #  define THREAD_OBJ            HANDLE
