@@ -33,10 +33,10 @@ endif
 
 
 
-all: Main 
+all: InChat
 
 
-Main: main.c
+InChat: main.c
 	$(CC) $(LDFLAGS) $(CFLAGS) main.c  $(LIBS) -o $@
 #	LD_LIBRARY_PATH=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))/lib/64
 #	export @LD_LIBRARY_PATH
