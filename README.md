@@ -8,6 +8,8 @@ In chat is basicly a program that connects to a local/remote [EMS server.](http:
       * [Compiling From Source](#compiling-from-source)
       * [Downloading the RPM ](#downloading-the-rpm)
     * [Windows](#windows)
+      * [Compiling From Source](#compiling-from-source-1)
+      * [Install](#install)
 * [Config File](#config-file)
 * [Commando's](#commandos)
     
@@ -26,16 +28,24 @@ You'll also need a tibco user called admin with the password admin for login fro
 ### Client Side
 #### Linux
 ##### Compiling from source
-
 Download the latest release version from this program.
-
-Unzip the downloaded file and add (LOCATION TO GIT)/lib/linux/64 to your PATH.
+Unzip the downloaded file and add this to your .bash_profile
+> LD_LIBRARY_PATH=/home/udingh/Projects/InChat/lib/linux/64
+> export LD_LIBRARY_PATH
 
 Run make (If it doesn't compile send me a message)
 ##### Downloading the RPM 
 (Not Done Yet)
 #### Windows
 ##### Compiling from source
+Download the latest release version from this program.
+Unzip the downloaded file and add (LOCATION TO GIT)/bin to your PATH.
+Run make (If it doesn't compile send me a message)
+##### Install
+Download the latest release version from this program.
+Unzip the downloaded file and add (LOCATION TO GIT)/bin to your PATH.
+> setx path "%path%;D:\InChat\bin"
+
 ## Config File
 Added in the RPM(Not Done Yet) and release versions is a InChat.cfg. This config file contains three basic settings
 * url  : which is the url on which the EMS Server is
@@ -53,3 +63,4 @@ There are several different basic commandos in InChat, these are all excecuted w
 * changeRoom (ROOM NAME)    : lets you change rooms. Works only with public rooms. If you want to switch to a private room, you'll have to change the InChat.cfg file and restart the program
 * sendFile                  :
 * receiveFile               :
+* users                     :
