@@ -507,7 +507,7 @@ void commandoLocal(const char * message)
     }
 	else
 	{
-		printMessages("\x1B[32mUnknown Commando\x1B[0m");
+		printMessages("Unknown Commando");
 	}
 	
 }
@@ -667,7 +667,7 @@ void * monitorMessages(void * ptr)
 			if(strcmp(name,"conn_username")==0)
 			{
 				tibemsMsgField * fld = &field;
-				printMessages(stradd("\x1B[33m",stradd(fld->data.utf8Value, "\x1B[34m heeft zich afgemeld!\x1B[0m")));
+				printMessages(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
 				//userCount--;
 				printf("\n");
 			}
@@ -813,21 +813,21 @@ void run()
 	
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
-	#ifdef __linux__
-	sendMessage(stradd("\x1B[31m",stradd(username," \x1B[34mheeft zich aangemeld!\x1B[0m\n")));
-	#elif _WIN64
-	sendMessage(stradd(username," heeft zich aangemeld!"));
-	#endif
+	
+	sendMessage(stradd(stradd(username," heeft zich aangemeld!"),"~"));
+
 	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
 		int bytes_read;
-		char my_string[MAXBUF];
+		
 		#ifdef __linux__
+		char  * my_string;	
 		printf("\033[H"); 
 		bytes_read = getline(&my_string,&nbytes,stdin);
 		#elif _WIN32
+		char my_string[MAXBUF];
 		fgets(my_string, sizeof(my_string), stdin);
 		#endif
 		if(my_string[0] == '/')
