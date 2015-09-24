@@ -127,7 +127,9 @@ void ParseCfgFile(char * filename)
 {
 	
 	FILE *fp = fopen(filename,"r");
-	 if (fp != NULL)
+	if (fp == NULL)
+		fp = fopen(stradd("/etc/inchat/",filename),"r");
+	if (fp != NULL)
         { 
                 char line[MAXBUF];
                 int i = 0;
@@ -153,7 +155,8 @@ void ParseCfgFile(char * filename)
 			printf("This is how you make a Config File: \n");
 			printf("url = <serverUrl>\n");
 			printf("port = <portNumber>\n");
-			printf("topic = <topic>\n");
+			printf("topic = <topic>\n\n");
+			printf("The Config file should be placed here: /etc/inchat/Inchat.cfg");
 			fflush(stdout);
 			exit(1);
 		}
