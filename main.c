@@ -379,32 +379,10 @@ void commandoRemote(const char * message)
 				char * whosays =  strtok(NULL, " /\n~");
 				strcpy(userNames[userCountHad],whosays);				
 				userCountHad+=1;
-				if (userCountHad == userCount)
-				{
-					int i = 0;
-					for(i = 0 ; i <userCount;i++)
-					{
-						printMessages(userNames[i]);
-					}
-					printMessages("Users who are online: ");
-					userCountHad = 0;
-				}
+				
 			 }
 		}
-		else if (strcmp(commando, "userCountChanged")==0)
-        {
-            char * what =  strtok(NULL, " /\n~");
-                if(strcmp(what,"up" )== 0)
-			    {
-					//userCount++;
-					//printMessages("Count UP ");
-			    }
-		 	    else if(strcmp(what,"down")== 0)
-			    {
-					//userCount--;
-					//printMessages("Count DOWN ");
-			    }
-        }
+		
 	}
 	else 
 	{
@@ -486,26 +464,19 @@ void commandoLocal(const char * message)
 			printMessages("Give a new room name");
         
     }
-	else if(strcmp(commando,"users" ) == 0)
+	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
 		tibems_status               status      = TIBEMS_OK;
 		sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
 		char * dest = NULL;
-		/*//tibemsDestination_GetName(destination, dest, TIBEMS_DESTINATION_MAX);
-		printf("%s",topic_a);
-		//status = tibemsTopicInfo_Create(&topicInfo,"InChat.Rooms.Public.Main");
-		 if (status != TIBEMS_OK)
-			 fail("Error destroying tibemsMsg", errorContext);	
-		int * oop = NULL;
-		//status = tibemsTopicInfo_GetName(topicInfo,dest,200);		 
-		if (status != TIBEMS_OK)
-			 fail("Error destroying tibemsMsg", errorContext);
-		printf("%s",dest);
-		//status =tibemsTopicInfo_GetSubscriberCount(topicInfo, oop);		
-		if (status != TIBEMS_OK)
-			 fail("Error destroying tibemsMsg", errorContext);
-		userCount = 2;*/
-		printf("%d",userCount); 
+		usleep(300000);
+		int i = 0;
+		for(i = 0 ; i <userCountHad;i++)
+		{
+			printMessages(userNames[i]);
+		}
+		printMessages("Users who are online: ");
+		userCountHad = 0;
         
     }
 	else
