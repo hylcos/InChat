@@ -471,6 +471,7 @@ void commandoLocal(const char * message)
 		char * dest = NULL;
 		usleep(300000);
 		int i = 0;
+		printMessages("----------------------------- ");
 		for(i = 0 ; i <userCountHad;i++)
 		{
 			printMessages(userNames[i]);
