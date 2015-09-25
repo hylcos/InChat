@@ -288,7 +288,7 @@ void printMessages( const char * message)
 void changeRoom(char * roomAdress)
 {
     tibems_status               status      = TIBEMS_OK;
-	sendMessage(stradd(username," has changed rooms\n"));
+	sendMessage(stradd(username," has left the room\n"));
     status = tibemsDestination_Destroy(destination);
      if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
@@ -299,11 +299,19 @@ void changeRoom(char * roomAdress)
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
     sendMessage("/cmd userCountChanged down");
-	
-    status = tibemsSession_CreateProducer(session,&msgProducer,destination);
+
+	strcpy(topic_a,roomAdress);
+	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
-	sendMessage("/cmd userCountChanged up");
+	sendMessage(stradd(username," has entered the room\n"));
+	
+	
+	#ifdef __linux__
+	printf("%c]0;%s%c", '\033', topic_a, '\007');
+	#elif _WIN64
+	SetConsoleTitle(topic_a);
+    #endif
 }
 
 void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO///////////////////////////// Moeilijk heden
@@ -454,7 +462,7 @@ void commandoLocal(const char * message)
                 sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
         }
     }
-    else if(strcmp(commando,"changeRoom" ) == 0)
+    else if(strcmp(commando,"changeRoom" ) == 0  || strcmp(commando,"cr") == 0)
     {
         
         commando =  strtok(NULL, " /\n");
@@ -464,6 +472,17 @@ void commandoLocal(const char * message)
 			printMessages("Give a new room name");
         
     }
+	else if(strcmp(commando,"room" ) == 0 || strcmp(commando,"pwd") == 0)
+    {
+        
+        char * server = strtok((char *)topic_a, ".");
+		char * type =  strtok(NULL, ".");
+		char * type2 =  strtok(NULL, ".");
+        char * roomname =  strtok(NULL, ".");
+		printMessages("-------------------------------------");
+		printMessages(stradd(stradd(stradd("You are in the ",type2), " room "), roomname));
+		printMessages("-------------------------------------");
+	}
 	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
 		tibems_status               status      = TIBEMS_OK;
@@ -604,6 +623,13 @@ void * recieveMessage(void * ptr)
 	
 		}
 		status = tibemsMsg_Destroy(msg);
+		
+		#ifdef __linux__
+		
+		#elif _WIN64
+		FLASHWINFO info = { sizeof(info), GetConsoleWindow(), FLASHW_TIMERNOFG | FLASHW_TRAY, 3, 0 };
+		FlashWindowEx(&info);
+		#endif
 	}			  
 }
 
@@ -857,6 +883,9 @@ int main (int argc, char * argv[])
 	ParseCfgFile("Inchat.cfg");
 	#ifdef __linux__
 	printf("\033[2J");
+	printf("%c]0;%s%c", '\033', topic_a, '\007');
+	#elif _WIN64
+	SetConsoleTitle(topic_a);
 	#endif 
 	fflush(stdout);
 	
