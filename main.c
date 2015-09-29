@@ -142,7 +142,13 @@ void sig_handler(int signo)
 		// }
 	// }
 	// exit(1);
+
 }
+char *itoa(long i, char* s, int dummy_radix) {
+    sprintf(s, "%ld", i);
+    return s;
+}
+
 void printlogo()
 {
 	printf("################################################################################");
@@ -930,7 +936,9 @@ void run()
 	
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
+	#ifdef _WIN32	
 	commandoLocal("/users");
+	#endif
 	sendMessage(stradd(stradd(username," heeft zich aangemeld!"),"~"));
 	
 	sendMessage("/cmd userCountChanged up ~");
