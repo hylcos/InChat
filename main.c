@@ -6,6 +6,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <math.h>
 #ifdef __linux__
 #include <pwd.h>
 #elif _WIN32
@@ -86,6 +87,33 @@ WORD saved_attributes;
 
 void sendMessage(char * message);
 void commandoLocal(const char * message);
+
+void fail( const char* message, tibemsErrorContext errContext)
+{
+    tibems_status               status = TIBEMS_OK;
+    const char*                 str    = NULL;
+
+    printf("ERROR: %s\n",message);
+
+    status = tibemsErrorContext_GetLastErrorString(errContext, &str);
+    printf("\nLast error message =\n%s\n", str);
+    status = tibemsErrorContext_GetLastErrorStackTrace(errContext, &str);
+    printf("\nStack trace = \n%s\n", str);
+
+    exit(1);
+}
+
+void onException(tibemsConnection conn,tibems_status reason,void*  closure)
+{
+    /* print the connection exception status */
+
+    if (reason == TIBEMS_SERVER_NOT_CONNECTED)
+    {
+        printf(" CONNECTION EXCEPTION: Server Disconnected\n");
+        receive = 0;
+    }
+}
+
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -93,7 +121,28 @@ char* stradd(const char* a, const char* b)
     *ret = '\0';
     return strcat(strcat(ret, a) ,b);
 }
+void sig_handler(int signo)
+{
+	// tibems_status               status      = TIBEMS_OK;	
+	// printf("Caught signal %d\n",signo);
+	// sendMessage(" heeft zich afgemeld");
+	// if (signo == SIGINT){
+	// printf("SIGINT ONtvangen");
+		// status = tibemsDestination_Destroy(destination);
+		// if (status != TIBEMS_OK)
+		// {
+			// fail("Error destroying tibemsDestination", errorContext);
+		// }
 
+		// /* close the connection */
+		// status = tibemsConnection_Close(connection);
+		// if (status != TIBEMS_OK)
+		// {
+			// fail("Error closing tibemsConnection", errorContext);
+		// }
+	// }
+	// exit(1);
+}
 void printlogo()
 {
 	printf("################################################################################");
@@ -171,32 +220,6 @@ void ParseCfgFile(char * filename)
 							topic_a[i] = '\0';
 				}
 		}
-}
-
-void fail( const char* message, tibemsErrorContext errContext)
-{
-    tibems_status               status = TIBEMS_OK;
-    const char*                 str    = NULL;
-
-    printf("ERROR: %s\n",message);
-
-    status = tibemsErrorContext_GetLastErrorString(errContext, &str);
-    printf("\nLast error message =\n%s\n", str);
-    status = tibemsErrorContext_GetLastErrorStackTrace(errContext, &str);
-    printf("\nStack trace = \n%s\n", str);
-
-    exit(1);
-}
-
-void onException(tibemsConnection conn,tibems_status reason,void*  closure)
-{
-    /* print the connection exception status */
-
-    if (reason == TIBEMS_SERVER_NOT_CONNECTED)
-    {
-        printf(" CONNECTION EXCEPTION: Server Disconnected\n");
-        receive = 0;
-    }
 }
 
 static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
@@ -487,14 +510,88 @@ void commandoLocal(const char * message)
 		printMessage(stradd(stradd(stradd("You are in the ",type2), " room "), roomname));
 		printMessage("=====================================");
 	}
+	else if(strcmp(commando,"rooms" ) == 0 )
+    {
+		tibems_status              		status      = TIBEMS_OK;
+		tibemsAdmin  					admin		= NULL;
+		tibemsCollection                topicInfos  = NULL;
+		tibemsTopicInfo                 topicInfo	= NULL;
+		tibems_int                  	count;
+		char                       		nameBuf[MAXBUF];
+		char							intBuf[MAXBUF];
+		
+		status = tibemsAdmin_Create(&admin,url_a,"admin","admin",sslParams);
+		if (status != TIBEMS_OK)
+			fail("Creating a new Admin", errorContext);
+			
+		status = tibemsAdmin_GetTopics(admin, &topicInfos, "InChat.Rooms.Public.>", TIBEMS_DEST_GET_NOTEMP);
+		if (status != TIBEMS_OK)
+			fail("getting the topics", errorContext);status = tibemsAdmin_GetTopics(admin, &topicInfos, "InChat.Rooms.Public.>", TIBEMS_DEST_GET_NOTEMP);
+		
+		
+		status = tibemsCollection_GetFirst(topicInfos, (&topicInfo));
+		if (status != TIBEMS_OK)
+		{
+			fail("Error getting first queue in collection", errorContext);
+		}
+
+		status = tibemsTopicInfo_GetName(topicInfo, nameBuf, sizeof(nameBuf));
+		if (status != TIBEMS_OK)
+		{
+			fail("Error getting first topic name", errorContext);
+		}
+		status = tibemsTopicInfo_GetSubscriberCount(topicInfo ,&count);
+		if (status != TIBEMS_OK)
+			fail("getting the topics", errorContext);
+		
+		itoa(count, intBuf,10);
+		printMessage("======================================================");
+		
+		printMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+		while (status != TIBEMS_NOT_FOUND)
+		{
+			status = tibemsCollection_GetNext(topicInfos, &topicInfo);
+			if (status == TIBEMS_NOT_FOUND)
+			{
+				status = TIBEMS_OK;
+				break;
+			}
+			if (status != TIBEMS_OK)
+			{
+				fail("Error getting next topic in collection", errorContext);
+			}
+
+			status = tibemsTopicInfo_GetName(topicInfo, nameBuf, sizeof(nameBuf));
+			if (status != TIBEMS_OK)
+			{
+				fail("Error getting next topic name", errorContext);
+			}
+			
+			status = tibemsTopicInfo_GetSubscriberCount(topicInfo ,&count);
+			if (status != TIBEMS_OK)
+				fail("getting the topics", errorContext);
+			itoa(count, intBuf,10);
+			printMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+
+			tibemsTopicInfo_Destroy(topicInfo);
+		}
+		printMessage("All the Public InChat Rooms");
+		printMessage("======================================================");
+	status = tibemsAdmin_Close(admin);
+	if (status != TIBEMS_OK)
+		fail("Error closing tibemsAdmin connection", errorContext);
+	
+	tibemsCollection_Destroy(topicInfos); 
+	}
 	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
-		tibems_status               status      = TIBEMS_OK;
+		
 		sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
 		char * dest = NULL;
 		usleep(300000);
 		int i = 0;
-		printMessage("----------------------------- ");
+		printMessage("-------------------------------------------------------");
+		
 		for(i = 0 ; i < userCountHad;i++)
 		{
 			printMessage(userNames[i]);
@@ -503,6 +600,7 @@ void commandoLocal(const char * message)
 			printMessage("NOBODY IS ONLINE");
 		}
 		printMessage("Users who are online: ");
+		printMessage("-------------------------------------------------------");
 		userCountHad = 0;
         
     }
@@ -525,6 +623,8 @@ void commandoLocal(const char * message)
 void * recieveMessage(void * ptr)
 {
 	const char*                 txt         = NULL;
+	
+	
 	while(1){
 		tibems_status               status      = TIBEMS_OK;
 		tibemsMsg                   msg         = NULL;
@@ -538,7 +638,7 @@ void * recieveMessage(void * ptr)
             if (status == TIBEMS_INTR)
             {
             }
-            fail("Error receiving message", errorContext);
+            //fail("Error receiving message", errorContext);
         }
         if (!msg)
             break;
@@ -652,48 +752,48 @@ void * recieveMessage(void * ptr)
 void * monitorMessages(void * ptr)
 {
 	
-	tibems_status               status      = TIBEMS_OK;
-    tibemsMsg                   msg         = NULL;
-    tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
-	tibemsMsgField				field;
-	tibemsMsgEnum  				enumeration;
-	const char * 				name;
+	// tibems_status               status      = TIBEMS_OK;
+    // tibemsMsg                   msg         = NULL;
+    // tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
+	// tibemsMsgField				field;
+	// tibemsMsgEnum  				enumeration;
+	// const char * 				name;
 	
-	while(1){
+	// while(1){
 		
-		status = tibemsMsgConsumer_Receive(d_msgConsumer,&msg);
-		#ifdef __linux__
-		printf("\e[H\e[2J");
-		#endif 
+		// status = tibemsMsgConsumer_Receive(d_msgConsumer,&msg);
+		// #ifdef __linux__
+		// printf("\e[H\e[2J");
+		// #endif 
 
 
-        status = tibemsMsg_GetBodyType(msg,&msgType);
-        if (status != TIBEMS_OK)
-            fail("Error getting message type", errorContext);
+        // status = tibemsMsg_GetBodyType(msg,&msgType);
+        // if (status != TIBEMS_OK)
+            // fail("Error getting message type", errorContext);
 
  
 
-       status = tibemsMsg_GetPropertyNames(msg,&enumeration);
+       // status = tibemsMsg_GetPropertyNames(msg,&enumeration);
    
-		while((status = tibemsMsgEnum_GetNextName(enumeration,&name)) == TIBEMS_OK)
-		{
-			status = tibemsMsg_GetProperty(msg,name,&field);
-			if (status != TIBEMS_OK)
-				fail("Error trying to get property by name", errorContext);
+		// while((status = tibemsMsgEnum_GetNextName(enumeration,&name)) == TIBEMS_OK)
+		// {
+			// status = tibemsMsg_GetProperty(msg,name,&field);
+			// if (status != TIBEMS_OK)
+				// fail("Error trying to get property by name", errorContext);
 
-			if(strcmp(name,"conn_username")==0)
-			{
-				tibemsMsgField * fld = &field;
-				printMessage(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
-				//userCount--;
-				printf("\n");
-			}
+			// if(strcmp(name,"conn_username")==0)
+			// {
+				// tibemsMsgField * fld = &field;
+				// printMessage(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
+				// //userCount--;
+				// printf("\n");
+			// }
 		
-    	}
+    	// }
 
-    tibemsMsgEnum_Destroy(enumeration);
+    // tibemsMsgEnum_Destroy(enumeration);
     
-	}
+	// }
 }
 
 void sendMessage(char * message)
@@ -824,19 +924,20 @@ void run()
     status = tibemsConnection_Start(d_connection);
     if (status != TIBEMS_OK)
         fail("Error starting tibemsConnection", errorContext);
-	commandoLocal("/users");
+	
 	pthread_t thread1;
 	int iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)""); 
 	
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
-	
+	commandoLocal("/users");
 	sendMessage(stradd(stradd(username," heeft zich aangemeld!"),"~"));
 	
 	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
+		
 		int bytes_read;
 		
 		#ifdef __linux__
