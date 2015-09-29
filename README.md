@@ -71,3 +71,5 @@ There are several different basic commandos in InChat, these are all excecuted w
 * receiveFile               :
 * users                     : Shows you which users are online
 * pwd / room                : Show you in which room you are
+* clear                     : Clears the chat screen for you
+* rooms                     : Shows you all the available Public rooms that you can join
