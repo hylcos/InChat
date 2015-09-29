@@ -85,7 +85,7 @@ WORD saved_attributes;
 #endif
 
 void sendMessage(char * message);
-
+void commandoLocal(const char * message);
 char* stradd(const char* a, const char* b)
 {
     size_t len = strlen(a) + strlen(b);
@@ -242,7 +242,7 @@ void print_bytes(const void *object, size_t size)
   printf("]");
 }
 
-void printMessages( const char * message)
+void printMessage( const char * message)
 {
 	int i; 
 	#ifdef __linux__
@@ -289,6 +289,7 @@ void changeRoom(char * roomAdress)
 {
     tibems_status               status      = TIBEMS_OK;
 	sendMessage(stradd(username," has left the room\n"));
+	
     status = tibemsDestination_Destroy(destination);
      if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
@@ -304,6 +305,7 @@ void changeRoom(char * roomAdress)
 	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
+	commandoLocal("/clear");
 	sendMessage(stradd(username," has entered the room\n"));
 	
 	
@@ -333,7 +335,7 @@ void FileTransfer(char * fileName, bool side) //////////////////////////////////
 
 void commandoRemote(const char * message)
 {
-    //printMessages(stradd("Remote Commando: ",message));
+    //printMessage(stradd("Remote Commando: ",message));
 	char * commando = strtok((char *)message, " /\n~");
 	if(strcmp(commando,"cmd" ) == 0)
 	{
@@ -348,29 +350,29 @@ void commandoRemote(const char * message)
 					fileLocation = strtok(NULL, " /\n");
                     if(fileLocation != NULL)
                     {
-                        printMessages(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
-                        printMessages(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+                        printMessage(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
+                        printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
                     }
                 }
 			}					  
 		}
         else if (strcmp(commando, "receiveFile")==0)
         {
-            printMessages(stradd("Remote Commando: ",commando));
+            printMessage(stradd("Remote Commando: ",commando));
             commando =  strtok(NULL, " /\n");
             if(strcmp(commando, username)==0)
             {
-                 printMessages(stradd("Remote 2Commando: ",commando));
+                 printMessage(stradd("Remote 2Commando: ",commando));
                 commando =  strtok(NULL, " /\n");
                 if(strcmp(commando,"accept" )== 0)
 			    {
-					printMessages(stradd(remoteUsername," accepted your file transfer"));
+					printMessage(stradd(remoteUsername," accepted your file transfer"));
                     changeRoom(stradd("InChat.FileTransfer.",remoteUsername));
 					busyWithFiles = true;
 			    }
 		 	    else if(strcmp(commando,"deny")== 0)
 			    {
-					printMessages(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+					printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
 			    }
             }
         }
@@ -412,10 +414,10 @@ void commandoLocal(const char * message)
 	else if (strcmp(commando,"help") == 0)
 	{
 	
-		printMessages("changeUsername <NAME> : gebruikersnaam veranderen");
-		printMessages("quit : Programma afsluiten");
-		printMessages("help : Dit scherm");
-		printMessages("1mCommando's zijn: ");
+		printMessage("changeUsername <NAME> : gebruikersnaam veranderen");
+		printMessage("quit : Programma afsluiten");
+		printMessage("help : Dit scherm");
+		printMessage("1mCommando's zijn: ");
 	}
 	else if(strcmp(commando,"changeUsername" ) == 0 || strcmp(commando,"cu" ) == 0 )
 	{
@@ -425,12 +427,12 @@ void commandoLocal(const char * message)
 			sendMessage(stradd(username," heeft zich afgemeld!\n"));
 			strcpy(username,commando);
 			prefix = stradd(username, ": ");
-			printMessages("Username Changed");
+			printMessage("Username Changed");
 			sendMessage(stradd(username," heeft zich aangemeld!\n"));
 		}
 		else
 		{
-			printMessages("Give a new username");
+			printMessage("Give a new username");
 		}
 	}
 	else if(strcmp(commando,"sendFile" ) == 0)
@@ -442,10 +444,10 @@ void commandoLocal(const char * message)
 			if(fileLocation != NULL)
 				sendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
 			else
-				printMessages("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
+				printMessage("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
 		}
 		else
-			printMessages("Send file command syntax is: /sendFile <to> <file>");
+			printMessage("Send file command syntax is: /sendFile <to> <file>");
 	}
     else if(strcmp(commando,"receiveFile" ) == 0)
     {
@@ -466,22 +468,24 @@ void commandoLocal(const char * message)
     {
         
         commando =  strtok(NULL, " /\n");
+		
         if(commando != NULL)
            changeRoom(stradd("InChat.Rooms.Public.",commando));
 		else
-			printMessages("Give a new room name");
+			printMessage("Give a new room name");
         
     }
 	else if(strcmp(commando,"room" ) == 0 || strcmp(commando,"pwd") == 0)
     {
-        
-        char * server = strtok((char *)topic_a, ".");
+        char topic_copy[MAXBUF];
+		strcpy(topic_copy,topic_a);
+        char * server = strtok((char *)topic_copy, ".");
 		char * type =  strtok(NULL, ".");
 		char * type2 =  strtok(NULL, ".");
         char * roomname =  strtok(NULL, ".");
-		printMessages("-------------------------------------");
-		printMessages(stradd(stradd(stradd("You are in the ",type2), " room "), roomname));
-		printMessages("-------------------------------------");
+		printMessage("=====================================");
+		printMessage(stradd(stradd(stradd("You are in the ",type2), " room "), roomname));
+		printMessage("=====================================");
 	}
 	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
@@ -490,18 +494,30 @@ void commandoLocal(const char * message)
 		char * dest = NULL;
 		usleep(300000);
 		int i = 0;
-		printMessages("----------------------------- ");
-		for(i = 0 ; i <userCountHad;i++)
+		printMessage("----------------------------- ");
+		for(i = 0 ; i < userCountHad;i++)
 		{
-			printMessages(userNames[i]);
+			printMessage(userNames[i]);
 		}
-		printMessages("Users who are online: ");
+		if(userCountHad == 0){
+			printMessage("NOBODY IS ONLINE");
+		}
+		printMessage("Users who are online: ");
 		userCountHad = 0;
         
     }
+	else if (strcmp(commando,"clear") == 0)
+	{
+		int i;
+		for( i = 0 ; i < 23; i++)
+		{
+			strcpy(Messages[i],"");
+		}
+		printMessage("");
+	}
 	else
 	{
-		printMessages("Unknown Commando");
+		printMessage("Unknown Commando");
 	}
 	
 }
@@ -594,7 +610,7 @@ void * recieveMessage(void * ptr)
                 fail("Error getting tibemsTextMsg text", errorContext);
             }
 
-            //printMessages(txt);
+            //printMessage(txt);
         }
 		
 		//*_txt = *txt;
@@ -612,14 +628,14 @@ void * recieveMessage(void * ptr)
 		if(strchr(value,'@' )!= NULL){
 			char * _txt = strstr((char *)value,"@" );
 			if(strncmp(_txt, stradd("@",username),strlen(username)+1) == 0)
-				printMessages(value);
+				printMessage(value);
 		}
 		else if(strstr(value,"/cmd") != NULL){
 			commandoRemote(value);
 		}
 		else
 		{
-			printMessages(value);
+			printMessage(value);
 	
 		}
 		status = tibemsMsg_Destroy(msg);
@@ -668,7 +684,7 @@ void * monitorMessages(void * ptr)
 			if(strcmp(name,"conn_username")==0)
 			{
 				tibemsMsgField * fld = &field;
-				printMessages(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
+				printMessage(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
 				//userCount--;
 				printf("\n");
 			}
@@ -808,7 +824,7 @@ void run()
     status = tibemsConnection_Start(d_connection);
     if (status != TIBEMS_OK)
         fail("Error starting tibemsConnection", errorContext);
-	
+	commandoLocal("/users");
 	pthread_t thread1;
 	int iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)""); 
 	
@@ -816,7 +832,7 @@ void run()
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	
 	sendMessage(stradd(stradd(username," heeft zich aangemeld!"),"~"));
-
+	
 	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
