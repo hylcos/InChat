@@ -77,6 +77,11 @@ char 							userNames[MAXBUF][MAXBUF];
 tibemsTopicInfo 				topicInfo	 = NULL;	
 
 /*-----------------------------------------------------------------------
+ * Ignore and IgnoreList
+ *----------------------------------------------------------------------*/
+ char 							ignoreList[MAXBUF][50];
+ int 							ignoreCount	 = 0;
+/*-----------------------------------------------------------------------
  * Windows Only variables
  *----------------------------------------------------------------------*/
  #ifdef _WIN32
@@ -121,6 +126,7 @@ char* stradd(const char* a, const char* b)
     *ret = '\0';
     return strcat(strcat(ret, a) ,b);
 }
+
 void sig_handler(int signo)
 {
 	// tibems_status               status      = TIBEMS_OK;	
@@ -144,10 +150,13 @@ void sig_handler(int signo)
 	// exit(1);
 
 }
+
+#ifdef __linux__
 char *itoa(long i, char* s, int dummy_radix) {
     sprintf(s, "%ld", i);
     return s;
 }
+#endif
 
 void printlogo()
 {
@@ -271,14 +280,9 @@ void print_bytes(const void *object, size_t size)
   printf("]");
 }
 
-void printMessage( const char * message)
+void addMessage( const char * message)
 {
-	int i; 
-	#ifdef __linux__
-	printf("\e[H\e[2J");
-	#elif _WIN64
-	system("cls");
-	#endif 
+	int i;
 	for( i = 23; i > 0; i--) 
 	{
 		fflush(stdout);
@@ -288,6 +292,19 @@ void printMessage( const char * message)
 	}
 	strcpy(Messages[0],message);
 	Messages[0][strlen(message)] ='\0';
+	
+	
+}
+
+void printMessage( const char * message)
+{
+	int i; 
+	#ifdef __linux__
+	printf("\e[H\e[2J");
+	#elif _WIN64
+	system("cls");
+	#endif 
+	addMessage(message);
 	for( i = 0 ; i < 23; i++)
 	{
 		#ifdef __linux__
@@ -429,7 +446,7 @@ void commandoRemote(const char * message)
 	}
 }
 
-void commandoLocal(const char * message)
+void commandoLocal(const char * message) //Commando's quit/help/changeUsername/chnageRoom/room/rooms/users/clear/ignore/ignoreList
 {
 	char * commando = strtok((char *)message, " /\n");
 	char * wow = " quit";
@@ -551,9 +568,9 @@ void commandoLocal(const char * message)
 			fail("getting the topics", errorContext);
 		
 		itoa(count, intBuf,10);
-		printMessage("======================================================");
+		addMessage("======================================================");
 		
-		printMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+		addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
 		while (status != TIBEMS_NOT_FOUND)
 		{
 			status = tibemsCollection_GetNext(topicInfos, &topicInfo);
@@ -577,11 +594,11 @@ void commandoLocal(const char * message)
 			if (status != TIBEMS_OK)
 				fail("getting the topics", errorContext);
 			itoa(count, intBuf,10);
-			printMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+			addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
 
 			tibemsTopicInfo_Destroy(topicInfo);
 		}
-		printMessage("All the Public InChat Rooms");
+		addMessage("All the Public InChat Rooms");
 		printMessage("======================================================");
 	status = tibemsAdmin_Close(admin);
 	if (status != TIBEMS_OK)
@@ -618,6 +635,55 @@ void commandoLocal(const char * message)
 			strcpy(Messages[i],"");
 		}
 		printMessage("");
+	}
+	else if (strcmp(commando,"ignore") == 0)
+	{ 
+		bool inList = false;
+		int indexInList;
+		commando =  strtok(NULL, " /\n");
+		
+        if(commando != NULL)
+		{
+			int i;
+			for( i = 0 ; i < ignoreCount && !inList; i++)
+			{
+				if ( strcmp(commando,ignoreList[i]) == 0)
+				{
+					inList = true;
+					int j;
+					ignoreCount--;
+					for( j = i ; j < ignoreCount; j++)
+					{
+						strcpy(ignoreList[j],ignoreList[j+1]);
+					}
+					addMessage("===========================================");
+					addMessage(stradd(commando, " Deleted to the ignorelist "));
+					printMessage("===========================================");
+				}
+			}
+			if (!inList){
+				strcpy(ignoreList[ignoreCount],commando);
+				addMessage("===========================================");
+				addMessage(stradd(ignoreList[ignoreCount], " added to the ignorelist "));
+				printMessage("===========================================");
+				ignoreCount++;
+			}
+		}
+		else
+		{
+			printMessage("Give the user name of the person you want to Ignore");
+		}
+	}
+	else if (strcmp(commando,"ignoreList") == 0)
+	{
+		int i;
+		printMessage("===========================================");
+		for( i = 0 ; i < ignoreCount; i++)
+		{
+			addMessage(ignoreList[i]);
+		}
+		printMessage("List of people you are ignoring");
+		printMessage("===========================================");
 	}
 	else
 	{
@@ -741,7 +807,15 @@ void * recieveMessage(void * ptr)
 		}
 		else
 		{
-			printMessage(value);
+			bool inList = false;
+			int i;
+			for( i = 0 ; i < ignoreCount; i++)
+			{
+				if(strncmp(value,ignoreList[i],strlen(ignoreList[i])) == 0)
+					inList = true;
+			}
+			if(!inList)
+				printMessage(value);
 	
 		}
 		status = tibemsMsg_Destroy(msg);
