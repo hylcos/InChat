@@ -73,3 +73,5 @@ There are several different basic commandos in InChat, these are all excecuted w
 * pwd / room                : Show you in which room you are
 * clear                     : Clears the chat screen for you
 * rooms                     : Shows you all the available Public rooms that you can join
+* ignore (USERNAME)         : Adds the username that is given to a list of people that should be ignored 
+* ignoreList                : Show the list of people being ignored
