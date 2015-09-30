@@ -336,8 +336,12 @@ void changeRoom(char * roomAdress)
     tibems_status               status      = TIBEMS_OK;
 	sendMessage(stradd(username," has left the room\n"));
 	
+	
     status = tibemsDestination_Destroy(destination);
-     if (status != TIBEMS_OK)
+    if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgConsumer", errorContext);
+	status = tibemsMsgConsumer_Close(msgConsumer);
+    if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
      status = tibemsTopic_Create(&destination,roomAdress);
     if (status != TIBEMS_OK)
@@ -345,13 +349,15 @@ void changeRoom(char * roomAdress)
     status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
-    sendMessage("/cmd userCountChanged down");
-
+	
+	status = tibemsMsgProducer_Close(msgProducer);
+	if (status != TIBEMS_OK)
+        fail("Error creating tibemsMsgProducer", errorContext);
 	strcpy(topic_a,roomAdress);
 	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
-	commandoLocal("/clear");
+	//commandoLocal("/clear");
 	sendMessage(stradd(username," has entered the room\n"));
 	
 	
@@ -386,7 +392,7 @@ void commandoRemote(const char * message)
 	if(strcmp(commando,"cmd" ) == 0)
 	{
 		commando =  strtok(NULL, " /\n");
-		if(strcmp(commando,"sendFile" ) == 0)
+		if(strcmp(commando,"sendFile" ) == 0) //NOT DONE
 		{
 			commando =  strtok(NULL, " /\n");
 			if(strcmp(commando,username ) == 0)
@@ -402,7 +408,7 @@ void commandoRemote(const char * message)
                 }
 			}					  
 		}
-        else if (strcmp(commando, "receiveFile")==0)
+        else if (strcmp(commando, "receiveFile")==0) //NOT DONE
         {
             printMessage(stradd("Remote Commando: ",commando));
             commando =  strtok(NULL, " /\n");
@@ -457,13 +463,21 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 		sendMessage("/cmd userCountChanged down");
 		exit(1);
 	}
-	else if (strcmp(commando,"help") == 0)
+	else if (strcmp(commando,"help") == 0 || strcmp(commando,"h") == 0)
 	{
-	
-		printMessage("changeUsername <NAME> : gebruikersnaam veranderen");
-		printMessage("quit : Programma afsluiten");
-		printMessage("help : Dit scherm");
-		printMessage("1mCommando's zijn: ");
+		addMessage("===========================================");
+		addMessage("ignoreList : Laat de lijst zien van emsnen die je negeert");
+		addMessage("ignore <NAME> : Laat geen berichten van deze persoon meer zien");
+		addMessage("clear : Maakt het scherm leeg");
+		addMessage("users/whoison :  Laat zien welke users in jou kamer online zijn");
+		addMessage("rooms	:  Laat zien in welke public kamers er al users zitten");
+		addMessage("room/pwd : Laat zien in welke kamer je zit");
+		addMessage("changeRoom/cr <ROOM_NAME> : Wisselen tussen chat ruimtes");
+		addMessage("changeUsername/cu <NAME> : gebruikersnaam veranderen");
+		addMessage("quit : Programma afsluiten");
+		addMessage("help/h : Dit scherm");
+		addMessage("Commando's zijn: ");
+		printMessage("===========================================");
 	}
 	else if(strcmp(commando,"changeUsername" ) == 0 || strcmp(commando,"cu" ) == 0 )
 	{
@@ -481,7 +495,7 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 			printMessage("Give a new username");
 		}
 	}
-	else if(strcmp(commando,"sendFile" ) == 0)
+	else if(strcmp(commando,"sendFile" ) == 0) //NOT DONE
 	{
 		remoteUsername =  strtok(NULL, " /\n");
 		if(remoteUsername != NULL)
@@ -495,7 +509,7 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 		else
 			printMessage("Send file command syntax is: /sendFile <to> <file>");
 	}
-    else if(strcmp(commando,"receiveFile" ) == 0)
+    else if(strcmp(commando,"receiveFile" ) == 0)//NOT DONE
     {
         char * awnser =  strtok(NULL, " /\n");
         if(awnser != NULL)
@@ -567,10 +581,13 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 		if (status != TIBEMS_OK)
 			fail("getting the topics", errorContext);
 		
-		itoa(count, intBuf,10);
-		addMessage("======================================================");
 		
-		addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+		addMessage("======================================================");
+		if (count > 0)
+		{
+			itoa(count, intBuf,10);
+			addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+		}
 		while (status != TIBEMS_NOT_FOUND)
 		{
 			status = tibemsCollection_GetNext(topicInfos, &topicInfo);
@@ -593,9 +610,11 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 			status = tibemsTopicInfo_GetSubscriberCount(topicInfo ,&count);
 			if (status != TIBEMS_OK)
 				fail("getting the topics", errorContext);
-			itoa(count, intBuf,10);
-			addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
-
+			if (count > 0)
+			{
+				itoa(count, intBuf,10);
+				addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+			}
 			tibemsTopicInfo_Destroy(topicInfo);
 		}
 		addMessage("All the Public InChat Rooms");
@@ -962,12 +981,12 @@ void run()
             fail("Error settin24g pk password", errorContext);
     }
     status = tibemsConnectionFactory_CreateConnection(factory,&connection,"admin","admin");
-	status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin","admin" );
+	//status = tibemsConnectionFactory_CreateConnection(factory,&d_connection,"admin","admin" );
     if (status != TIBEMS_OK)
         fail("Error creating tibemsConnection", errorContext);
 	
     status = tibemsConnection_SetExceptionListener(connection, onException, NULL);
-	status = tibemsConnection_SetExceptionListener(d_connection, onException, NULL);
+	//status = tibemsConnection_SetExceptionListener(d_connection, onException, NULL);
     if (status != TIBEMS_OK)
         fail("Error setting exception listener", errorContext);
 	
@@ -975,23 +994,23 @@ void run()
     status = tibemsTopic_Create(&destination,topic_a );
    if (status != TIBEMS_OK)
         fail("Error creating tibemsDestination", errorContext);
-	status = tibemsTopic_Create(&d_destination,"$sys.monitor.producer.destroy");
-    if (status != TIBEMS_OK)
-        fail("Error creating tibemsDestination", errorContext);
+	// status = tibemsTopic_Create(&d_destination,"$sys.monitor.producer.destroy");
+    // if (status != TIBEMS_OK)
+        // fail("Error creating tibemsDestination", errorContext);
 	
     status = tibemsConnection_CreateSession(connection,&session,TIBEMS_FALSE,ackMode);
 	 if (status != TIBEMS_OK)
         fail("Error creating tibemsSession", errorContext);
-	status = tibemsConnection_CreateSession(d_connection,&d_session,TIBEMS_FALSE,ackMode);
-    if (status != TIBEMS_OK)
-        fail("Error creating tibemsSession", errorContext);
+	// status = tibemsConnection_CreateSession(d_connection,&d_session,TIBEMS_FALSE,ackMode);
+    // if (status != TIBEMS_OK)
+        // fail("Error creating tibemsSession", errorContext);
 	
     status = tibemsSession_CreateConsumer(session,&msgConsumer,destination,NULL,TIBEMS_FALSE);
 	if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
-	status = tibemsSession_CreateConsumer(d_session,&d_msgConsumer,d_destination,NULL,TIBEMS_FALSE);
-    if (status != TIBEMS_OK)
-        fail("Error creating tibemsMsgConsumer", errorContext);
+	// status = tibemsSession_CreateConsumer(d_session,&d_msgConsumer,d_destination,NULL,TIBEMS_FALSE);
+    // if (status != TIBEMS_OK)
+        // fail("Error creating tibemsMsgConsumer", errorContext);
 	
 	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
@@ -1001,15 +1020,15 @@ void run()
 	  if (status != TIBEMS_OK)
         fail("Error starting tibemsConnection", errorContext);
 	
-    status = tibemsConnection_Start(d_connection);
-    if (status != TIBEMS_OK)
-        fail("Error starting tibemsConnection", errorContext);
+    // status = tibemsConnection_Start(d_connection);
+    // if (status != TIBEMS_OK)
+        // fail("Error starting tibemsConnection", errorContext);
 	
 	pthread_t thread1;
 	int iret1 = pthread_create( &thread1, NULL, recieveMessage,(void *)""); 
 	
-	pthread_t thread2;
-	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
+	// pthread_t thread2;
+	// int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
 	#ifdef _WIN32	
 	commandoLocal("/users");
 	#endif
