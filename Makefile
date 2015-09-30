@@ -8,9 +8,9 @@ ifeq ($(OS),Windows_NT)
 CFLAGS=$(OPT_DBG_FLAGS) $(INCFILES) 
 
 LDFLAGS= -L lib/windows 
-TIBEMS_LIB=-ltibems -ltibemslookup -ltibemsufo
+TIBEMS_LIB=-ltibems -ltibemslookup -ltibemsufo -ltibemsadmin
 
-LIBS=  $(TIBEMS_LIB) $(TIBEMSADMIN_LIB64) $(TIBEMS_LDAP_LIB64) $(TIBEMS_XML_LIB64) $(TIBEMS_SSL_LIB64) $(TIBEMS_ZLIB64) $(TLIBS)
+LIBS=  $(TIBEMS_LIB)  $(TLIBS)
 else
 #
 # 64-bit libs

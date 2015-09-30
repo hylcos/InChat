@@ -6,6 +6,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <math.h>
 #ifdef __linux__
 #include <pwd.h>
 #elif _WIN32
@@ -76,6 +77,11 @@ char 							userNames[MAXBUF][MAXBUF];
 tibemsTopicInfo 				topicInfo	 = NULL;	
 
 /*-----------------------------------------------------------------------
+ * Ignore and IgnoreList
+ *----------------------------------------------------------------------*/
+ char 							ignoreList[MAXBUF][50];
+ int 							ignoreCount	 = 0;
+/*-----------------------------------------------------------------------
  * Windows Only variables
  *----------------------------------------------------------------------*/
  #ifdef _WIN32
@@ -85,6 +91,33 @@ WORD saved_attributes;
 #endif
 
 void sendMessage(char * message);
+void commandoLocal(const char * message);
+
+void fail( const char* message, tibemsErrorContext errContext)
+{
+    tibems_status               status = TIBEMS_OK;
+    const char*                 str    = NULL;
+
+    printf("ERROR: %s\n",message);
+
+    status = tibemsErrorContext_GetLastErrorString(errContext, &str);
+    printf("\nLast error message =\n%s\n", str);
+    status = tibemsErrorContext_GetLastErrorStackTrace(errContext, &str);
+    printf("\nStack trace = \n%s\n", str);
+
+    exit(1);
+}
+
+void onException(tibemsConnection conn,tibems_status reason,void*  closure)
+{
+    /* print the connection exception status */
+
+    if (reason == TIBEMS_SERVER_NOT_CONNECTED)
+    {
+        printf(" CONNECTION EXCEPTION: Server Disconnected\n");
+        receive = 0;
+    }
+}
 
 char* stradd(const char* a, const char* b)
 {
@@ -93,6 +126,37 @@ char* stradd(const char* a, const char* b)
     *ret = '\0';
     return strcat(strcat(ret, a) ,b);
 }
+
+void sig_handler(int signo)
+{
+	// tibems_status               status      = TIBEMS_OK;	
+	// printf("Caught signal %d\n",signo);
+	// sendMessage(" heeft zich afgemeld");
+	// if (signo == SIGINT){
+	// printf("SIGINT ONtvangen");
+		// status = tibemsDestination_Destroy(destination);
+		// if (status != TIBEMS_OK)
+		// {
+			// fail("Error destroying tibemsDestination", errorContext);
+		// }
+
+		// /* close the connection */
+		// status = tibemsConnection_Close(connection);
+		// if (status != TIBEMS_OK)
+		// {
+			// fail("Error closing tibemsConnection", errorContext);
+		// }
+	// }
+	// exit(1);
+
+}
+
+#ifdef __linux__
+char *itoa(long i, char* s, int dummy_radix) {
+    sprintf(s, "%ld", i);
+    return s;
+}
+#endif
 
 void printlogo()
 {
@@ -173,32 +237,6 @@ void ParseCfgFile(char * filename)
 		}
 }
 
-void fail( const char* message, tibemsErrorContext errContext)
-{
-    tibems_status               status = TIBEMS_OK;
-    const char*                 str    = NULL;
-
-    printf("ERROR: %s\n",message);
-
-    status = tibemsErrorContext_GetLastErrorString(errContext, &str);
-    printf("\nLast error message =\n%s\n", str);
-    status = tibemsErrorContext_GetLastErrorStackTrace(errContext, &str);
-    printf("\nStack trace = \n%s\n", str);
-
-    exit(1);
-}
-
-void onException(tibemsConnection conn,tibems_status reason,void*  closure)
-{
-    /* print the connection exception status */
-
-    if (reason == TIBEMS_SERVER_NOT_CONNECTED)
-    {
-        printf(" CONNECTION EXCEPTION: Server Disconnected\n");
-        receive = 0;
-    }
-}
-
 static void onCompletion(tibemsMsg msg, tibems_status status, void* closure)
 {
     const char *text;
@@ -242,14 +280,9 @@ void print_bytes(const void *object, size_t size)
   printf("]");
 }
 
-void printMessages( const char * message)
+void addMessage( const char * message)
 {
-	int i; 
-	#ifdef __linux__
-	printf("\e[H\e[2J");
-	#elif _WIN64
-	system("cls");
-	#endif 
+	int i;
 	for( i = 23; i > 0; i--) 
 	{
 		fflush(stdout);
@@ -259,6 +292,19 @@ void printMessages( const char * message)
 	}
 	strcpy(Messages[0],message);
 	Messages[0][strlen(message)] ='\0';
+	
+	
+}
+
+void printMessage( const char * message)
+{
+	int i; 
+	#ifdef __linux__
+	printf("\e[H\e[2J");
+	#elif _WIN64
+	system("cls");
+	#endif 
+	addMessage(message);
 	for( i = 0 ; i < 23; i++)
 	{
 		#ifdef __linux__
@@ -288,7 +334,8 @@ void printMessages( const char * message)
 void changeRoom(char * roomAdress)
 {
     tibems_status               status      = TIBEMS_OK;
-	sendMessage(stradd(username," has changed rooms\n"));
+	sendMessage(stradd(username," has left the room\n"));
+	
     status = tibemsDestination_Destroy(destination);
      if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
@@ -299,11 +346,20 @@ void changeRoom(char * roomAdress)
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgConsumer", errorContext);
     sendMessage("/cmd userCountChanged down");
-	
-    status = tibemsSession_CreateProducer(session,&msgProducer,destination);
+
+	strcpy(topic_a,roomAdress);
+	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
-	sendMessage("/cmd userCountChanged up");
+	commandoLocal("/clear");
+	sendMessage(stradd(username," has entered the room\n"));
+	
+	
+	#ifdef __linux__
+	printf("%c]0;%s%c", '\033', topic_a, '\007');
+	#elif _WIN64
+	SetConsoleTitle(topic_a);
+    #endif
 }
 
 void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO///////////////////////////// Moeilijk heden
@@ -325,7 +381,7 @@ void FileTransfer(char * fileName, bool side) //////////////////////////////////
 
 void commandoRemote(const char * message)
 {
-    //printMessages(stradd("Remote Commando: ",message));
+    //printMessage(stradd("Remote Commando: ",message));
 	char * commando = strtok((char *)message, " /\n~");
 	if(strcmp(commando,"cmd" ) == 0)
 	{
@@ -340,29 +396,29 @@ void commandoRemote(const char * message)
 					fileLocation = strtok(NULL, " /\n");
                     if(fileLocation != NULL)
                     {
-                        printMessages(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
-                        printMessages(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+                        printMessage(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
+                        printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
                     }
                 }
 			}					  
 		}
         else if (strcmp(commando, "receiveFile")==0)
         {
-            printMessages(stradd("Remote Commando: ",commando));
+            printMessage(stradd("Remote Commando: ",commando));
             commando =  strtok(NULL, " /\n");
             if(strcmp(commando, username)==0)
             {
-                 printMessages(stradd("Remote 2Commando: ",commando));
+                 printMessage(stradd("Remote 2Commando: ",commando));
                 commando =  strtok(NULL, " /\n");
                 if(strcmp(commando,"accept" )== 0)
 			    {
-					printMessages(stradd(remoteUsername," accepted your file transfer"));
+					printMessage(stradd(remoteUsername," accepted your file transfer"));
                     changeRoom(stradd("InChat.FileTransfer.",remoteUsername));
 					busyWithFiles = true;
 			    }
 		 	    else if(strcmp(commando,"deny")== 0)
 			    {
-					printMessages(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+					printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
 			    }
             }
         }
@@ -390,7 +446,7 @@ void commandoRemote(const char * message)
 	}
 }
 
-void commandoLocal(const char * message)
+void commandoLocal(const char * message) //Commando's quit/help/changeUsername/chnageRoom/room/rooms/users/clear/ignore/ignoreList
 {
 	char * commando = strtok((char *)message, " /\n");
 	char * wow = " quit";
@@ -404,10 +460,10 @@ void commandoLocal(const char * message)
 	else if (strcmp(commando,"help") == 0)
 	{
 	
-		printMessages("changeUsername <NAME> : gebruikersnaam veranderen");
-		printMessages("quit : Programma afsluiten");
-		printMessages("help : Dit scherm");
-		printMessages("1mCommando's zijn: ");
+		printMessage("changeUsername <NAME> : gebruikersnaam veranderen");
+		printMessage("quit : Programma afsluiten");
+		printMessage("help : Dit scherm");
+		printMessage("1mCommando's zijn: ");
 	}
 	else if(strcmp(commando,"changeUsername" ) == 0 || strcmp(commando,"cu" ) == 0 )
 	{
@@ -417,12 +473,12 @@ void commandoLocal(const char * message)
 			sendMessage(stradd(username," heeft zich afgemeld!\n"));
 			strcpy(username,commando);
 			prefix = stradd(username, ": ");
-			printMessages("Username Changed");
+			printMessage("Username Changed");
 			sendMessage(stradd(username," heeft zich aangemeld!\n"));
 		}
 		else
 		{
-			printMessages("Give a new username");
+			printMessage("Give a new username");
 		}
 	}
 	else if(strcmp(commando,"sendFile" ) == 0)
@@ -434,10 +490,10 @@ void commandoLocal(const char * message)
 			if(fileLocation != NULL)
 				sendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
 			else
-				printMessages("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
+				printMessage("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
 		}
 		else
-			printMessages("Send file command syntax is: /sendFile <to> <file>");
+			printMessage("Send file command syntax is: /sendFile <to> <file>");
 	}
     else if(strcmp(commando,"receiveFile" ) == 0)
     {
@@ -454,35 +510,184 @@ void commandoLocal(const char * message)
                 sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
         }
     }
-    else if(strcmp(commando,"changeRoom" ) == 0)
+    else if(strcmp(commando,"changeRoom" ) == 0  || strcmp(commando,"cr") == 0)
     {
         
         commando =  strtok(NULL, " /\n");
+		
         if(commando != NULL)
            changeRoom(stradd("InChat.Rooms.Public.",commando));
 		else
-			printMessages("Give a new room name");
+			printMessage("Give a new room name");
         
     }
+	else if(strcmp(commando,"room" ) == 0 || strcmp(commando,"pwd") == 0)
+    {
+        char topic_copy[MAXBUF];
+		strcpy(topic_copy,topic_a);
+        char * server = strtok((char *)topic_copy, ".");
+		char * type =  strtok(NULL, ".");
+		char * type2 =  strtok(NULL, ".");
+        char * roomname =  strtok(NULL, ".");
+		printMessage("=====================================");
+		printMessage(stradd(stradd(stradd("You are in the ",type2), " room "), roomname));
+		printMessage("=====================================");
+	}
+	else if(strcmp(commando,"rooms" ) == 0 )
+    {
+		tibems_status              		status      = TIBEMS_OK;
+		tibemsAdmin  					admin		= NULL;
+		tibemsCollection                topicInfos  = NULL;
+		tibemsTopicInfo                 topicInfo	= NULL;
+		tibems_int                  	count;
+		char                       		nameBuf[MAXBUF];
+		char							intBuf[MAXBUF];
+		
+		status = tibemsAdmin_Create(&admin,url_a,"admin","admin",sslParams);
+		if (status != TIBEMS_OK)
+			fail("Creating a new Admin", errorContext);
+			
+		status = tibemsAdmin_GetTopics(admin, &topicInfos, "InChat.Rooms.Public.>", TIBEMS_DEST_GET_NOTEMP);
+		if (status != TIBEMS_OK)
+			fail("getting the topics", errorContext);status = tibemsAdmin_GetTopics(admin, &topicInfos, "InChat.Rooms.Public.>", TIBEMS_DEST_GET_NOTEMP);
+		
+		
+		status = tibemsCollection_GetFirst(topicInfos, (&topicInfo));
+		if (status != TIBEMS_OK)
+		{
+			fail("Error getting first queue in collection", errorContext);
+		}
+
+		status = tibemsTopicInfo_GetName(topicInfo, nameBuf, sizeof(nameBuf));
+		if (status != TIBEMS_OK)
+		{
+			fail("Error getting first topic name", errorContext);
+		}
+		status = tibemsTopicInfo_GetSubscriberCount(topicInfo ,&count);
+		if (status != TIBEMS_OK)
+			fail("getting the topics", errorContext);
+		
+		itoa(count, intBuf,10);
+		addMessage("======================================================");
+		
+		addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+		while (status != TIBEMS_NOT_FOUND)
+		{
+			status = tibemsCollection_GetNext(topicInfos, &topicInfo);
+			if (status == TIBEMS_NOT_FOUND)
+			{
+				status = TIBEMS_OK;
+				break;
+			}
+			if (status != TIBEMS_OK)
+			{
+				fail("Error getting next topic in collection", errorContext);
+			}
+
+			status = tibemsTopicInfo_GetName(topicInfo, nameBuf, sizeof(nameBuf));
+			if (status != TIBEMS_OK)
+			{
+				fail("Error getting next topic name", errorContext);
+			}
+			
+			status = tibemsTopicInfo_GetSubscriberCount(topicInfo ,&count);
+			if (status != TIBEMS_OK)
+				fail("getting the topics", errorContext);
+			itoa(count, intBuf,10);
+			addMessage(stradd(stradd(nameBuf, "  ::::: Users Online: "),intBuf));	
+
+			tibemsTopicInfo_Destroy(topicInfo);
+		}
+		addMessage("All the Public InChat Rooms");
+		printMessage("======================================================");
+	status = tibemsAdmin_Close(admin);
+	if (status != TIBEMS_OK)
+		fail("Error closing tibemsAdmin connection", errorContext);
+	
+	tibemsCollection_Destroy(topicInfos); 
+	}
 	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
-		tibems_status               status      = TIBEMS_OK;
+		
 		sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
 		char * dest = NULL;
 		usleep(300000);
 		int i = 0;
-		printMessages("----------------------------- ");
-		for(i = 0 ; i <userCountHad;i++)
+		printMessage("-------------------------------------------------------");
+		
+		for(i = 0 ; i < userCountHad;i++)
 		{
-			printMessages(userNames[i]);
+			printMessage(userNames[i]);
 		}
-		printMessages("Users who are online: ");
+		if(userCountHad == 0){
+			printMessage("NOBODY IS ONLINE");
+		}
+		printMessage("Users who are online: ");
+		printMessage("-------------------------------------------------------");
 		userCountHad = 0;
         
     }
+	else if (strcmp(commando,"clear") == 0)
+	{
+		int i;
+		for( i = 0 ; i < 23; i++)
+		{
+			strcpy(Messages[i],"");
+		}
+		printMessage("");
+	}
+	else if (strcmp(commando,"ignore") == 0)
+	{ 
+		bool inList = false;
+		int indexInList;
+		commando =  strtok(NULL, " /\n");
+		
+        if(commando != NULL)
+		{
+			int i;
+			for( i = 0 ; i < ignoreCount && !inList; i++)
+			{
+				if ( strcmp(commando,ignoreList[i]) == 0)
+				{
+					inList = true;
+					int j;
+					ignoreCount--;
+					for( j = i ; j < ignoreCount; j++)
+					{
+						strcpy(ignoreList[j],ignoreList[j+1]);
+					}
+					addMessage("===========================================");
+					addMessage(stradd(commando, " Deleted to the ignorelist "));
+					printMessage("===========================================");
+				}
+			}
+			if (!inList){
+				strcpy(ignoreList[ignoreCount],commando);
+				addMessage("===========================================");
+				addMessage(stradd(ignoreList[ignoreCount], " added to the ignorelist "));
+				printMessage("===========================================");
+				ignoreCount++;
+			}
+		}
+		else
+		{
+			printMessage("Give the user name of the person you want to Ignore");
+		}
+	}
+	else if (strcmp(commando,"ignoreList") == 0)
+	{
+		int i;
+		printMessage("===========================================");
+		for( i = 0 ; i < ignoreCount; i++)
+		{
+			addMessage(ignoreList[i]);
+		}
+		printMessage("List of people you are ignoring");
+		printMessage("===========================================");
+	}
 	else
 	{
-		printMessages("Unknown Commando");
+		printMessage("Unknown Commando");
 	}
 	
 }
@@ -490,6 +695,8 @@ void commandoLocal(const char * message)
 void * recieveMessage(void * ptr)
 {
 	const char*                 txt         = NULL;
+	
+	
 	while(1){
 		tibems_status               status      = TIBEMS_OK;
 		tibemsMsg                   msg         = NULL;
@@ -503,7 +710,7 @@ void * recieveMessage(void * ptr)
             if (status == TIBEMS_INTR)
             {
             }
-            fail("Error receiving message", errorContext);
+            //fail("Error receiving message", errorContext);
         }
         if (!msg)
             break;
@@ -575,7 +782,7 @@ void * recieveMessage(void * ptr)
                 fail("Error getting tibemsTextMsg text", errorContext);
             }
 
-            //printMessages(txt);
+            //printMessage(txt);
         }
 		
 		//*_txt = *txt;
@@ -593,65 +800,80 @@ void * recieveMessage(void * ptr)
 		if(strchr(value,'@' )!= NULL){
 			char * _txt = strstr((char *)value,"@" );
 			if(strncmp(_txt, stradd("@",username),strlen(username)+1) == 0)
-				printMessages(value);
+				printMessage(value);
 		}
 		else if(strstr(value,"/cmd") != NULL){
 			commandoRemote(value);
 		}
 		else
 		{
-			printMessages(value);
+			bool inList = false;
+			int i;
+			for( i = 0 ; i < ignoreCount; i++)
+			{
+				if(strncmp(value,ignoreList[i],strlen(ignoreList[i])) == 0)
+					inList = true;
+			}
+			if(!inList)
+				printMessage(value);
 	
 		}
 		status = tibemsMsg_Destroy(msg);
+		
+		#ifdef __linux__
+		
+		#elif _WIN64
+		FLASHWINFO info = { sizeof(info), GetConsoleWindow(), FLASHW_TIMERNOFG | FLASHW_TRAY, 3, 0 };
+		FlashWindowEx(&info);
+		#endif
 	}			  
 }
 
 void * monitorMessages(void * ptr)
 {
 	
-	tibems_status               status      = TIBEMS_OK;
-    tibemsMsg                   msg         = NULL;
-    tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
-	tibemsMsgField				field;
-	tibemsMsgEnum  				enumeration;
-	const char * 				name;
+	// tibems_status               status      = TIBEMS_OK;
+    // tibemsMsg                   msg         = NULL;
+    // tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
+	// tibemsMsgField				field;
+	// tibemsMsgEnum  				enumeration;
+	// const char * 				name;
 	
-	while(1){
+	// while(1){
 		
-		status = tibemsMsgConsumer_Receive(d_msgConsumer,&msg);
-		#ifdef __linux__
-		printf("\e[H\e[2J");
-		#endif 
+		// status = tibemsMsgConsumer_Receive(d_msgConsumer,&msg);
+		// #ifdef __linux__
+		// printf("\e[H\e[2J");
+		// #endif 
 
 
-        status = tibemsMsg_GetBodyType(msg,&msgType);
-        if (status != TIBEMS_OK)
-            fail("Error getting message type", errorContext);
+        // status = tibemsMsg_GetBodyType(msg,&msgType);
+        // if (status != TIBEMS_OK)
+            // fail("Error getting message type", errorContext);
 
  
 
-       status = tibemsMsg_GetPropertyNames(msg,&enumeration);
+       // status = tibemsMsg_GetPropertyNames(msg,&enumeration);
    
-		while((status = tibemsMsgEnum_GetNextName(enumeration,&name)) == TIBEMS_OK)
-		{
-			status = tibemsMsg_GetProperty(msg,name,&field);
-			if (status != TIBEMS_OK)
-				fail("Error trying to get property by name", errorContext);
+		// while((status = tibemsMsgEnum_GetNextName(enumeration,&name)) == TIBEMS_OK)
+		// {
+			// status = tibemsMsg_GetProperty(msg,name,&field);
+			// if (status != TIBEMS_OK)
+				// fail("Error trying to get property by name", errorContext);
 
-			if(strcmp(name,"conn_username")==0)
-			{
-				tibemsMsgField * fld = &field;
-				printMessages(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
-				//userCount--;
-				printf("\n");
-			}
+			// if(strcmp(name,"conn_username")==0)
+			// {
+				// tibemsMsgField * fld = &field;
+				// printMessage(stradd(fld->data.utf8Value, " heeft zich afgemeld"));
+				// //userCount--;
+				// printf("\n");
+			// }
 		
-    	}
+    	// }
 
-    tibemsMsgEnum_Destroy(enumeration);
+    // tibemsMsgEnum_Destroy(enumeration);
     
-	}
+	// }
 }
 
 void sendMessage(char * message)
@@ -788,13 +1010,16 @@ void run()
 	
 	pthread_t thread2;
 	int iret2 = pthread_create( &thread2, NULL, monitorMessages,(void *)""); 
-	
+	#ifdef _WIN32	
+	commandoLocal("/users");
+	#endif
 	sendMessage(stradd(stradd(username," heeft zich aangemeld!"),"~"));
-
+	
 	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
+		
 		int bytes_read;
 		
 		#ifdef __linux__
@@ -857,6 +1082,9 @@ int main (int argc, char * argv[])
 	ParseCfgFile("Inchat.cfg");
 	#ifdef __linux__
 	printf("\033[2J");
+	printf("%c]0;%s%c", '\033', topic_a, '\007');
+	#elif _WIN64
+	SetConsoleTitle(topic_a);
 	#endif 
 	fflush(stdout);
 	

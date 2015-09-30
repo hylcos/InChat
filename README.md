@@ -66,7 +66,12 @@ There are several different basic commandos in InChat, these are all excecuted w
 * changeUsername / cu (NAME): This commando lets you change username.
 * exit                      : exits the program
 * help                      : show the help menu with all the commandos and parameters
-* changeRoom (ROOM NAME)    : lets you change rooms. Works only with public rooms. If you want to switch to a private room, you'll have to change the InChat.cfg file and restart the program
+* changeRoom/cr (ROOM NAME)    : lets you change rooms. Works only with public rooms. If you want to switch to a private room, you'll have to change the InChat.cfg file and restart the program
 * sendFile                  :
 * receiveFile               :
-* users                     :
+* users                     : Shows you which users are online
+* pwd / room                : Show you in which room you are
+* clear                     : Clears the chat screen for you
+* rooms                     : Shows you all the available Public rooms that you can join
+* ignore (USERNAME)         : Adds the username that is given to a list of people that should be ignored 
+* ignoreList                : Show the list of people being ignored
