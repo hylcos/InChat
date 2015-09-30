@@ -21,6 +21,7 @@
 /*-----------------------------------------------------------------------
  * Variables
  *----------------------------------------------------------------------*/
+char * 							version		 = "v0.5.1";
 char							url_a[MAXBUF];
 char							port_a[MAXBUF];
 char							topic_a[MAXBUF];
@@ -62,11 +63,11 @@ char*                           pk_password  = NULL;
 int								counter      = 1;
 
 /*----------------------------------------------------------------------- 
- * variables for receiving files
+ * Variables for Private Chats
  *----------------------------------------------------------------------*/
-char *							remoteUsername 		= NULL;
-bool							busyWithFiles 	= false;
-char *							fileLocation 	= NULL;
+char * 							privateChatUsername = NULL;
+bool							privateChatBusy		= false;
+
 
 /*-----------------------------------------------------------------------
  * variables for checking who is in the same room as you
@@ -176,14 +177,14 @@ void printlogo()
 	printf("################################################################################");
 	printf("################################################################################");
 	printf("################################################################################");
-	printf("##############  Created by Hylco Uding #        \xa9            ################");
+	printf("#############  Created by Hylco Uding #  InChat Version : %s ##############\n",version);
 	printf("################################################################################");
 	printf("################################################################################");
 	printf("################################################################################");
 	printf("###################         Press ENTER to Continue          ###################");
 	printf("################################################################################");
 	printf("################################################################################");
-	printf("##################################################################################");
+	printf("################################################################################");
 	
 }
 
@@ -394,39 +395,39 @@ void commandoRemote(const char * message)
 		commando =  strtok(NULL, " /\n");
 		if(strcmp(commando,"sendFile" ) == 0) //NOT DONE
 		{
-			commando =  strtok(NULL, " /\n");
-			if(strcmp(commando,username ) == 0)
-			{
-				remoteUsername =  strtok(NULL, " /\n");
-				if(remoteUsername != NULL){
-					fileLocation = strtok(NULL, " /\n");
-                    if(fileLocation != NULL)
-                    {
-                        printMessage(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
-                        printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
-                    }
-                }
-			}					  
+			// commando =  strtok(NULL, " /\n");
+			// if(strcmp(commando,username ) == 0)
+			// {
+				// remoteUsername =  strtok(NULL, " /\n");
+				// if(remoteUsername != NULL){
+					// fileLocation = strtok(NULL, " /\n");
+                    // if(fileLocation != NULL)
+                    // {
+                        // printMessage(stradd(stradd(stradd("Do you want to recieve:  ",fileLocation)," from "),remoteUsername));
+                        // printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+                    // }
+                // }
+			// }					  
 		}
         else if (strcmp(commando, "receiveFile")==0) //NOT DONE
         {
-            printMessage(stradd("Remote Commando: ",commando));
-            commando =  strtok(NULL, " /\n");
-            if(strcmp(commando, username)==0)
-            {
-                 printMessage(stradd("Remote 2Commando: ",commando));
-                commando =  strtok(NULL, " /\n");
-                if(strcmp(commando,"accept" )== 0)
-			    {
-					printMessage(stradd(remoteUsername," accepted your file transfer"));
-                    changeRoom(stradd("InChat.FileTransfer.",remoteUsername));
-					busyWithFiles = true;
-			    }
-		 	    else if(strcmp(commando,"deny")== 0)
-			    {
-					printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
-			    }
-            }
+            // printMessage(stradd("Remote Commando: ",commando));
+            // commando =  strtok(NULL, " /\n");
+            // if(strcmp(commando, username)==0)
+            // {
+                 // printMessage(stradd("Remote 2Commando: ",commando));
+                // commando =  strtok(NULL, " /\n");
+                // if(strcmp(commando,"accept" )== 0)
+			    // {
+					// printMessage(stradd(remoteUsername," accepted your file transfer"));
+                    // changeRoom(stradd("InChat.FileTransfer.",remoteUsername));
+					// busyWithFiles = true;
+			    // }
+		 	    // else if(strcmp(commando,"deny")== 0)
+			    // {
+					// printMessage(("If so type: \" /receiveFile accept\" or else \" /receiveFile deny \""));
+			    // }
+            // }
         }
 		else if (strcmp(commando, "whoison")==0)
         {
@@ -444,7 +445,26 @@ void commandoRemote(const char * message)
 				
 			 }
 		}
-		
+		else if (strcmp(commando, "privateChat")==0)
+        {
+			
+			 char * amithis =  strtok(NULL, " /\n~");
+			 if(strcmp(amithis,username)==0)
+			 {
+				if( !privateChatBusy )
+				{
+					privateChatUsername =  strtok(NULL, " /\n~");
+					privateChatBusy = true;	
+					addMessage("=================================================");
+					addMessage(stradd(privateChatUsername, " wants to have a private chat with you"));
+					printMessage("=================================================");
+				} 
+				else 
+				{
+				
+				}
+			 }
+		}
 	}
 	else 
 	{
@@ -475,6 +495,8 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 		addMessage("changeRoom/cr <ROOM_NAME> : Wisselen tussen chat ruimtes");
 		addMessage("changeUsername/cu <NAME> : gebruikersnaam veranderen");
 		addMessage("quit : Programma afsluiten");
+		addMessage("version : Laat de InChat versie zien");
+		addMessage("info: Laat informatie over InChat zien");
 		addMessage("help/h : Dit scherm");
 		addMessage("Commando's zijn: ");
 		printMessage("===========================================");
@@ -497,34 +519,59 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 	}
 	else if(strcmp(commando,"sendFile" ) == 0) //NOT DONE
 	{
-		remoteUsername =  strtok(NULL, " /\n");
-		if(remoteUsername != NULL)
-		{
-			fileLocation = strtok(NULL, " /\n");
-			if(fileLocation != NULL)
-				sendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
-			else
-				printMessage("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
-		}
-		else
-			printMessage("Send file command syntax is: /sendFile <to> <file>");
+		// remoteUsername =  strtok(NULL, " /\n");
+		// if(remoteUsername != NULL)
+		// {
+			// fileLocation = strtok(NULL, " /\n");
+			// if(fileLocation != NULL)
+				// sendMessage(stradd(stradd("/cmd ",stradd("sendFile",stradd(" ", stradd(stradd(remoteUsername, " "),stradd(stradd(username," "),fileLocation)))))," ~"));
+			// else
+				// printMessage("Send file command syntax is: /sendFile <<username>/accept/deny> <file>");
+		// }
+		// else
+			// printMessage("Send file command syntax is: /sendFile <to> <file>");
 	}
     else if(strcmp(commando,"receiveFile" ) == 0)//NOT DONE
     {
-        char * awnser =  strtok(NULL, " /\n");
-        if(awnser != NULL)
-        {
-            if(strcmp(awnser,"accept") == 0)
-            {
-                sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " accept "), "~"));
-                changeRoom(stradd("InChat.FileTransfer.",username));
-				busyWithFiles = true;
-            }
-            else if(strcmp(awnser,"deny") == 0)
-                sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
-        }
+        // char * awnser =  strtok(NULL, " /\n");
+        // if(awnser != NULL)
+        // {
+            // if(strcmp(awnser,"accept") == 0)
+            // {
+                // sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " accept "), "~"));
+                // changeRoom(stradd("InChat.FileTransfer.",username));
+				// busyWithFiles = true;
+            // }
+            // else if(strcmp(awnser,"deny") == 0)
+                // sendMessage(stradd(stradd(stradd(stradd("/cmd ","receiveFile "),remoteUsername), " deny " ), "~"));
+        // }
     }
-    else if(strcmp(commando,"changeRoom" ) == 0  || strcmp(commando,"cr") == 0)
+    else if(strcmp(commando,"privateChat" ) == 0)
+    {
+        
+        char * remoteUsername =  strtok(NULL, " /\n");
+		
+        if(remoteUsername != NULL)
+		{
+			int i;
+			bool userOnline = false;
+			for (i = 0; i < userCountHad; i++)
+			{
+				if (strcmp(userNames[i], remoteUsername) == 0)
+				{
+					userOnline = true;
+				}
+			}
+			if(userOnline)
+				sendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","privateChat "),remoteUsername), " "), username), "  ~"));
+			else
+				printMessage("User you wanted to have a private chat with isn't online");
+		}
+		else
+			printMessage("Give a username which you want to have a private match with");
+        
+    }
+	else if(strcmp(commando,"changeRoom" ) == 0  || strcmp(commando,"cr") == 0)
     {
         
         commando =  strtok(NULL, " /\n");
@@ -627,13 +674,14 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 	}
 	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
-		
+		userCountHad = 0;
 		sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
-		char * dest = NULL;
 		usleep(300000);
+		char * dd =  strtok(NULL, " /\n");
+		
 		int i = 0;
 		printMessage("-------------------------------------------------------");
-		
+			
 		for(i = 0 ; i < userCountHad;i++)
 		{
 			printMessage(userNames[i]);
@@ -643,7 +691,7 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 		}
 		printMessage("Users who are online: ");
 		printMessage("-------------------------------------------------------");
-		userCountHad = 0;
+	
         
     }
 	else if (strcmp(commando,"clear") == 0)
@@ -702,6 +750,19 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 			addMessage(ignoreList[i]);
 		}
 		printMessage("List of people you are ignoring");
+		printMessage("===========================================");
+	}
+	else if (strcmp(commando,"version") == 0)
+	{
+		addMessage("===========================================");
+		addMessage(stradd("InChat Version : ", version));
+		printMessage("===========================================");
+	}
+	else if (strcmp(commando,"info") == 0)
+	{
+		addMessage("===========================================");
+		addMessage("<http://www.github.com/hylcos/InChat.git>");
+		addMessage("InChat is created by Hylco Uding <hylcos@gmail.com>");
 		printMessage("===========================================");
 	}
 	else
