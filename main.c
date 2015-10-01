@@ -53,6 +53,9 @@ tibemsSession                   d_session      = NULL;
 tibemsMsgConsumer               d_msgConsumer  = NULL;
 tibemsDestination               d_destination  = NULL;
 
+
+bool changingRooms		 =	 false;
+
 /*-----------------------------------------------------------------------
  * Needs to go away
  *----------------------------------------------------------------------*/
@@ -332,9 +335,10 @@ void printMessage( const char * message)
 	
 }
 
-void changeRoom(char * roomAdress)
+void changeRoom(char * roomAdress) 
 {
     tibems_status               status      = TIBEMS_OK;
+	changingRooms = true;
 	sendMessage(stradd(username," has left the room\n"));
 	
 	
@@ -358,9 +362,8 @@ void changeRoom(char * roomAdress)
 	status = tibemsSession_CreateProducer(session,&msgProducer,destination);
     if (status != TIBEMS_OK)
         fail("Error creating tibemsMsgProducer", errorContext);
-	//commandoLocal("/clear");
 	sendMessage(stradd(username," has entered the room\n"));
-	
+	changingRooms = false;
 	
 	#ifdef __linux__
 	printf("%c]0;%s%c", '\033', topic_a, '\007');
@@ -450,10 +453,10 @@ void commandoRemote(const char * message)
 			
 			 char * amithis =  strtok(NULL, " /\n~");
 			 if(strcmp(amithis,username)==0)
-			 {
+			 {	privateChatUsername =  strtok(NULL, " /\n~");
 				if( !privateChatBusy )
 				{
-					privateChatUsername =  strtok(NULL, " /\n~");
+					
 					privateChatBusy = true;	
 					addMessage("=================================================");
 					addMessage(stradd(privateChatUsername, " wants to have a private chat with you"));
@@ -461,7 +464,10 @@ void commandoRemote(const char * message)
 				} 
 				else 
 				{
-				
+					addMessage("=================================================");
+					addMessage(stradd(privateChatUsername, " wanted to have a private chat with you,"));
+					addMessage(" but there is another person waiting for a private chat");
+					printMessage("=================================================");
 				}
 			 }
 		}
@@ -562,8 +568,13 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 					userOnline = true;
 				}
 			}
-			if(userOnline)
+			if(userOnline){
+				if(privateChatBusy)
+				{
 				sendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","privateChat "),remoteUsername), " "), username), "  ~"));
+				printMessage(stradd(stradd(" You send ", remoteUsername), " a request for a private chat"));
+				}
+			}
 			else
 				printMessage("User you wanted to have a private chat with isn't online");
 		}
@@ -765,6 +776,10 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 		addMessage("InChat is created by Hylco Uding <hylcos@gmail.com>");
 		printMessage("===========================================");
 	}
+	else if (strcmp(commando,"accept") == 0)
+	{
+		
+	}
 	else
 	{
 		printMessage("Unknown Commando");
@@ -783,7 +798,7 @@ void * recieveMessage(void * ptr)
 
 		tibemsMsgType               msgType     = TIBEMS_MESSAGE_UNKNOWN;
 		char*                       msgTypeName = "UNKNOWN";
-		
+		while(changingRooms){}
 		status = tibemsMsgConsumer_Receive(msgConsumer,&msg);
         if (status != TIBEMS_OK)
         {
