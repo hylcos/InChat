@@ -12,6 +12,7 @@ In chat is basically a program that connects to a local/remote [EMS server.](htt
       * [Install](#install)
 * [Config File](#config-file)
 * [Commando's](#commandos)
+  *[Commando's where you'll have to accept stuff](#commandos-where-youll-have-to-accept-stuff) 
     
 ##  Setup
 There are (like almost every programs) actions to be done to be actually able to run the program
@@ -75,6 +76,7 @@ There are several different basic commandos in InChat, these are all executed wi
 * rooms                     : Shows you all the available Public rooms that you can join
 * ignore (USERNAME)         : Adds the username that is given to a list of people that should be ignored 
 * ignoreList                : Show the list of people being ignored
+
 ### Commando's where you'll have to accept stuff
 Some functions of this program need two people. But what if one person wanted to execute a function but the other person doesn't want to do that. Here is how all that is taken care of in this program.
 
