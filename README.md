@@ -12,7 +12,7 @@ In chat is basically a program that connects to a local/remote [EMS server.](htt
       * [Install](#install)
 * [Config File](#config-file)
 * [Commando's](#commandos)
-  *[Commando's where you'll have to accept stuff](#commandos-where-youll-have-to-accept-stuff) 
+  * [Commando's where you'll have to accept stuff](#commandos-where-youll-have-to-accept-stuff) 
     
 ##  Setup
 There are (like almost every programs) actions to be done to be actually able to run the program
