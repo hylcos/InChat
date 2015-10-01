@@ -60,7 +60,6 @@ bool changingRooms		 =	 false;
  * Needs to go away
  *----------------------------------------------------------------------*/
 char*                           numberMsg    = "1";
-char*                           userName     = NULL;
 char*                           password     = NULL;
 char*                           pk_password  = NULL;
 int								counter      = 1;
@@ -69,7 +68,9 @@ int								counter      = 1;
  * Variables for Private Chats
  *----------------------------------------------------------------------*/
 char * 							privateChatUsername = NULL;
+char  							reservePrivateUsername[MAXBUF];
 bool							privateChatBusy		= false;
+bool							privateChatLeader   = false;
 
 
 /*-----------------------------------------------------------------------
@@ -372,6 +373,13 @@ void changeRoom(char * roomAdress)
     #endif
 }
 
+void updateOnlineUsers()
+{
+	userCountHad = 0;
+	sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
+	usleep(300000);
+}
+
 void FileTransfer(char * fileName, bool side) ///////////////////////////////////TODDDDOOOOOO///////////////////////////// Moeilijk heden
 {
 	/*if(side == true) //Sender of the file
@@ -453,23 +461,71 @@ void commandoRemote(const char * message)
 			
 			 char * amithis =  strtok(NULL, " /\n~");
 			 if(strcmp(amithis,username)==0)
-			 {	privateChatUsername =  strtok(NULL, " /\n~");
+			 {	
+				privateChatUsername =  strtok(NULL, " /\n~");
 				if( !privateChatBusy )
 				{
-					
 					privateChatBusy = true;	
 					addMessage("=================================================");
 					addMessage(stradd(privateChatUsername, " wants to have a private chat with you"));
 					printMessage("=================================================");
+					strcpy(reservePrivateUsername,privateChatUsername); 
 				} 
 				else 
 				{
 					addMessage("=================================================");
-					addMessage(stradd(privateChatUsername, " wanted to have a private chat with you,"));
 					addMessage(" but there is another person waiting for a private chat");
+					addMessage(stradd(privateChatUsername, " wanted to have a private chat with you,"));
 					printMessage("=================================================");
 				}
 			 }
+		}
+		else if (strcmp(commando,"accept") == 0)
+		{
+			char * amithis =  strtok(NULL, " /\n");
+			if (strcmp(amithis,username) == 0)
+			{
+				char * whichCommando =  strtok(NULL, " /\n");
+				if (strcmp(whichCommando,"privateChat" ) == 0)
+				{
+					addMessage("=================================================");
+					addMessage(stradd(reservePrivateUsername, " accepted your chat request"));
+					printMessage("=================================================");
+					changeRoom(stradd("InChat.Rooms.Private.",username));
+					privateChatBusy = false;
+					privateChatLeader = false;
+				}
+			}
+		}
+		else if (strcmp(commando,"deny") == 0)
+		{
+			char * amithis =  strtok(NULL, " /\n");
+			if (strcmp(amithis,username) == 0)
+			{
+				char * whichCommando =  strtok(NULL, " /\n");
+				if (strcmp(whichCommando,"privateChat" ) == 0)
+				{
+					privateChatBusy = false;
+					addMessage("=================================================");
+					addMessage(stradd(reservePrivateUsername, " denied your chat request"));
+					printMessage("=================================================");
+				}
+			}
+		}
+		else if (strcmp(commando,"cancel") == 0)
+		{
+			char * amithis =  strtok(NULL, " /\n");
+			if (strcmp(amithis,username) == 0)
+			{
+				char * whichCommando =  strtok(NULL, " /\n");
+				if (strcmp(whichCommando,"privateChat" ) == 0)
+				{
+					privateChatBusy = false;
+					addMessage("=================================================");
+					addMessage(stradd(reservePrivateUsername, " canceled his/hers chat request"));
+					printMessage("=================================================");
+				}
+			}
 		}
 	}
 	else 
@@ -481,12 +537,11 @@ void commandoRemote(const char * message)
 void commandoLocal(const char * message) //Commando's quit/help/changeUsername/chnageRoom/room/rooms/users/clear/ignore/ignoreList
 {
 	char * commando = strtok((char *)message, " /\n");
-	char * wow = " quit";
+	
 	if(commando == NULL)
 		return;
 	if(strcmp(commando,"quit" ) == 0)
 	{
-		sendMessage("/cmd userCountChanged down");
 		exit(1);
 	}
 	else if (strcmp(commando,"help") == 0 || strcmp(commando,"h") == 0)
@@ -554,32 +609,40 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
     }
     else if(strcmp(commando,"privateChat" ) == 0)
     {
-        
-        char * remoteUsername =  strtok(NULL, " /\n");
-		
-        if(remoteUsername != NULL)
+        if(!privateChatBusy)
 		{
-			int i;
-			bool userOnline = false;
-			for (i = 0; i < userCountHad; i++)
+			privateChatUsername =  strtok(NULL, " /\n");
+			if(privateChatUsername != NULL)
 			{
-				if (strcmp(userNames[i], remoteUsername) == 0)
-				{
-					userOnline = true;
-				}
-			}
-			if(userOnline){
-				if(privateChatBusy)
-				{
-				sendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","privateChat "),remoteUsername), " "), username), "  ~"));
-				printMessage(stradd(stradd(" You send ", remoteUsername), " a request for a private chat"));
-				}
+				int i;
+				bool userOnline = false;
+				updateOnlineUsers();
+				for (i = 0; i < userCountHad; i++)
+					if (strcmp(userNames[i], privateChatUsername) == 0)
+						userOnline = true;
+						
+					if(userOnline)
+					{
+						sendMessage(stradd(stradd(stradd(stradd(stradd("/cmd ","privateChat "),privateChatUsername), " "), username), "  ~"));
+						addMessage("============================================================");
+						addMessage(stradd(stradd(" You send ", privateChatUsername), " a request for a private chat"));
+						privateChatBusy = true;
+						privateChatLeader = true;
+						usleep(30000);
+						printMessage("============================================================");
+						strcpy(reservePrivateUsername,privateChatUsername); 
+					}
+					else
+						printMessage("User you wanted to have a private chat with isn't online");
 			}
 			else
-				printMessage("User you wanted to have a private chat with isn't online");
+				printMessage("Give a username which you want to have a private match with");
 		}
 		else
-			printMessage("Give a username which you want to have a private match with");
+		{
+			addMessage("Cancel with \"/cancel privateChat\"");
+			printMessage("You still have a pending Private chat request");
+		}
         
     }
 	else if(strcmp(commando,"changeRoom" ) == 0  || strcmp(commando,"cr") == 0)
@@ -685,10 +748,9 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 	}
 	else if(strcmp(commando,"users") == 0 || strcmp(commando,"whoison") == 0)
     {
-		userCountHad = 0;
-		sendMessage(stradd(stradd(stradd("/cmd ","whoison "),username), "  ~"));
-		usleep(300000);
-		char * dd =  strtok(NULL, " /\n");
+		
+		
+		updateOnlineUsers();
 		
 		int i = 0;
 		printMessage("-------------------------------------------------------");
@@ -778,7 +840,62 @@ void commandoLocal(const char * message) //Commando's quit/help/changeUsername/c
 	}
 	else if (strcmp(commando,"accept") == 0)
 	{
+		char * whichCommando =  strtok(NULL, " /\n");
+		if (strcmp(whichCommando,"privateChat" ) == 0)
+		{	
+			if(!privateChatLeader)
+			{
+				sendMessage(stradd(stradd(stradd("/cmd ","accept "),reservePrivateUsername), " privateChat ~"));
+				changeRoom(stradd("InChat.Rooms.Private.",reservePrivateUsername));
+				privateChatBusy = false;
+				privateChatLeader = false;
+			}
+			else 
+			{
+				addMessage("==============================================================");
+				addMessage("As the one who send the request, you'll have to cancel it");
+				printMessage("==============================================================");
+			}
+		}
 		
+	}
+	else if (strcmp(commando,"deny") == 0)
+	{
+		char * whichCommando =  strtok(NULL, " /\n");
+		if (strcmp(whichCommando,"privateChat" ) == 0)
+		{
+			if(!privateChatLeader)
+			{
+				privateChatBusy = false;
+				privateChatLeader = false;
+				sendMessage(stradd(stradd(stradd("/cmd ","deny "),reservePrivateUsername), " privateChat ~"));
+			}
+			else 
+			{
+				addMessage("==============================================================");
+				addMessage("You cant deny a pending chat request, you'll have to cancel it");
+				printMessage("==============================================================");
+			}
+		}
+	}
+	else if (strcmp(commando,"cancel") == 0)
+	{
+		char * whichCommando =  strtok(NULL, " /\n");
+		if (strcmp(whichCommando,"privateChat" ) == 0)
+		{
+			if(privateChatLeader)
+			{
+				privateChatBusy = false;
+				privateChatLeader = false;
+				sendMessage(stradd(stradd(stradd("/cmd ","cancel "),reservePrivateUsername), " privateChat ~"));
+			}
+			else 
+			{
+				addMessage("==============================================================");
+				addMessage("You cant cancel a pending chat request, you'll have to deny it");
+				printMessage("==============================================================");
+			}
+		}
 	}
 	else
 	{
@@ -1110,7 +1227,6 @@ void run()
 	#endif
 	sendMessage(stradd(stradd(username," heeft zich aangemeld!"),"~"));
 	
-	sendMessage("/cmd userCountChanged up ~");
 	size_t nbytes = 1024;
 	while(1)
 	{
