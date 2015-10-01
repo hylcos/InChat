@@ -1101,15 +1101,12 @@ void run()
 	{
 		
 		int bytes_read;
-		
+			
 		#ifdef __linux__
-		char  * my_string;	
-		printf("\033[H"); 
-		bytes_read = getline(&my_string,&nbytes,stdin);
-		#elif _WIN32
+			printf("\033[H"); 
+		#endif
 		char my_string[MAXBUF];
 		fgets(my_string, sizeof(my_string), stdin);
-		#endif
 		if(my_string[0] == '/')
 			commandoLocal(my_string);
 		else 
