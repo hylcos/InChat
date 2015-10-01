@@ -1,12 +1,12 @@
 #  What is InChat
-In chat is basicly a program that connects to a local/remote [EMS server.](http://www.tibco.com/products/automation/enterprise-messaging/enterprise-message-service) 
+In chat is basically a program that connects to a local/remote [EMS server.](http://www.tibco.com/products/automation/enterprise-messaging/enterprise-message-service) 
 
 * [Setup](#setup)
   * [Server Side](#server-side)
   * [Client Side](#client-side)
-    * [Linux](#linux)
+    * [Linux](#Linux)
       * [Compiling From Source](#compiling-from-source)
-      * [Downloading the RPM ](#downloading-the-rpm)
+      * [Downloading the RPM ](#downloading-the-RPM)
     * [Windows](#windows)
       * [Compiling From Source](#compiling-from-source-1)
       * [Install](#install)
@@ -29,9 +29,9 @@ You'll also need a tibco user called admin with the password admin for login fro
 #### Linux
 ##### Compiling from source
 Download the latest release version from this program.
-Unzip the downloaded file and add this to your .bash_profile
+Unzip the downloaded file and add this to your .Bash_profile
 
-> LD_LIBRARY_PATH=/home/udingh/Projects/InChat/lib/linux/64
+> LD_LIBRARY_PATH=/home/udingh/Projects/InChat/lib/Linux/64
 
 > export LD_LIBRARY_PATH
 
@@ -56,13 +56,13 @@ Unzip the downloaded file and add (LOCATION TO GIT)/bin to your PATH.
 Added in the RPM(Not Done Yet) and release versions is a InChat.cfg. This config file contains three basic settings
 * url  : which is the url on which the EMS Server is
 * port : which is the port number on which the EMS Server runs. (Default number is 7222)
-* topic: the room you want to start in. (Default topic adress is InChat.Rooms.Public.Main)
+* topic: the room you want to start in. (Default topic address is InChat.Rooms.Public.Main)
 
 If you want to enter a private room you will have to change the topic to InChat.Rooms.Private. (PRIVATE_ROOM_NAME)
 You have to change to topic here because the /changeRoom commando only transfers you to Public rooms.
 
 ## Commando's
-There are several different basic commandos in InChat, these are all excecuted with /(COMMANDO) (PARAMETERS):
+There are several different basic commandos in InChat, these are all executed with /(COMMANDO) (PARAMETERS):
 * changeUsername / cu (NAME): This commando lets you change username.
 * exit                      : exits the program
 * help                      : show the help menu with all the commandos and parameters
@@ -75,3 +75,16 @@ There are several different basic commandos in InChat, these are all excecuted w
 * rooms                     : Shows you all the available Public rooms that you can join
 * ignore (USERNAME)         : Adds the username that is given to a list of people that should be ignored 
 * ignoreList                : Show the list of people being ignored
+### Commando's where you'll have to accept stuff
+Some functions of this program need two people. But what if one person wanted to execute a function but the other person doesn't want to do that. Here is how all that is taken care of in this program.
+
+You have several commando's like:
+ * privateChat <username>   : Starts a private Chat with you and another person
+ * 
+ 
+All these commando's have one shared thing, they can be accepted/denied or canceled. 
+ * accept <commandoName>    : Accepts the pending request   (Can only be done by the receiver of the request)
+ * deny <commandoName>      : Denies the pending request  (Can only be done by the receiver of the request)
+ * cancel <commandoName>    : Cancels the request (Can only be done by the sender of the request)
+ 
+The commandoName could be privateChat or one of the other commando's where you'll need two people for.
