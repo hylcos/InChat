@@ -79,12 +79,12 @@ There are several different basic commandos in InChat, these are all executed wi
 Some functions of this program need two people. But what if one person wanted to execute a function but the other person doesn't want to do that. Here is how all that is taken care of in this program.
 
 You have several commando's like:
- * privateChat <username>   : Starts a private Chat with you and another person
+ * privateChat (username)   : Starts a private Chat with you and another person
  * 
  
 All these commando's have one shared thing, they can be accepted/denied or canceled. 
- * accept <commandoName>    : Accepts the pending request   (Can only be done by the receiver of the request)
- * deny <commandoName>      : Denies the pending request  (Can only be done by the receiver of the request)
- * cancel <commandoName>    : Cancels the request (Can only be done by the sender of the request)
+ * accept (commandoName)    : Accepts the pending request   (Can only be done by the receiver of the request)
+ * deny (commandoName)      : Denies the pending request  (Can only be done by the receiver of the request)
+ * cancel (commandoName)    : Cancels the request (Can only be done by the sender of the request)
  
 The commandoName could be privateChat or one of the other commando's where you'll need two people for.
